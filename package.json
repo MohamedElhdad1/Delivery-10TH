@@ -1,0 +1,9 @@
+{
+  "name": "waselni-delivery",
+  "version": "1.0.0",
+  "description": "Arabic delivery management platform prototype",
+  "private": true,
+  "scripts": {
+    "serve": "python -m http.server 8080"
+  }
+}

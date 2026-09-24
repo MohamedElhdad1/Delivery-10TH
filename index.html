@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f766e">
+  <meta name="description" content="منصة توصيل العاشر من رمضان - خدمة توصيل سريعة وآمنة داخل المدينة">
+  <title>توصيل العاشر | منصة التوصيل الذكية</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- شاشة التحميل -->
+  <div id="splash" class="splash">
+    <div class="splash-content">
+      <div class="logo-anim">
+        <i class="fas fa-shipping-fast"></i>
+      </div>
+      <h1>توصيل العاشر</h1>
+      <p>منصة التوصيل الذكية لمدينة العاشر من رمضان</p>
+      <div class="loader"></div>
+    </div>
+  </div>
+
+  <!-- تطبيق رئيسي -->
+  <div id="app" class="app hidden">
+    <!-- شاشة تسجيل الدخول -->
+    <div id="auth-screen" class="screen active">
+      <div class="auth-container">
+        <div class="auth-header">
+          <div class="auth-logo">
+            <i class="fas fa-shipping-fast"></i>
+          </div>
+          <h1>توصيل العاشر</h1>
+          <p>خدمة توصيل سريعة وآمنة داخل مدينة العاشر من رمضان</p>
+        </div>
+
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="login">تسجيل الدخول</button>
+          <button class="auth-tab" data-tab="register">إنشاء حساب</button>
+        </div>
+
+        <!-- نموذج الدخول -->
+        <form id="login-form" class="auth-form active">
+          <div class="form-group">
+            <label><i class="fas fa-phone"></i> رقم الهاتف</label>
+            <input type="tel" id="login-phone" placeholder="01xxxxxxxxx" required>
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-lock"></i> كلمة المرور</label>
+            <input type="password" id="login-password" placeholder="••••••••" required>
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-user-tag"></i> نوع الحساب</label>
+            <select id="login-role" required>
+              <option value="client">عميل</option>
+              <option value="courier">مندوب</option>
+              <option value="admin">مدير النظام</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">
+            <i class="fas fa-sign-in-alt"></i> دخول
+          </button>
+          <p class="auth-hint">للحسابات التجريبية:<br>
+            عميل: 01000000001 / 123456<br>
+            مندوب: 01000000002 / 123456<br>
+            مدير النظام التجريبي: 01000000000 / 123456
+          </p>
+        </form>
+
+        <!-- نموذج التسجيل -->
+        <form id="register-form" class="auth-form">
+          <div class="form-group">
+            <label><i class="fas fa-user"></i> الاسم الكامل</label>
+            <input type="text" id="reg-name" placeholder="الاسم الثلاثي" required>
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-phone"></i> رقم الهاتف</label>
+            <input type="tel" id="reg-phone" placeholder="01xxxxxxxxx" required>
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-lock"></i> كلمة المرور</label>
+            <input type="password" id="reg-password" placeholder="••••••••" required>
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-user-tag"></i> نوع الحساب</label>
+            <select id="reg-role" required>
+              <option value="client">عميل</option>
+              <option value="courier">مندوب توصيل</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">
+            <i class="fas fa-user-plus"></i> إنشاء الحساب
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- واجهة العميل -->
+    <div id="client-screen" class="screen">
+      <header class="app-header">
+        <div class="header-right">
+          <div class="user-info" id="client-user-info">
+            <img src="https://ui-avatars.com/api/?name=عميل&background=0f766e&color=fff" alt="صورة" class="avatar" id="client-avatar">
+            <div>
+              <span class="user-name" id="client-name">مرحباً</span>
+              <small>عميل</small>
+            </div>
+          </div>
+        </div>
+        <div class="header-left">
+          <button class="icon-btn" id="client-notif-btn" title="الإشعارات">
+            <i class="fas fa-bell"></i>
+            <span class="badge" id="client-notif-count">0</span>
+          </button>
+          <button class="icon-btn" id="client-menu-btn"><i class="fas fa-bars"></i></button>
+        </div>
+      </header>
+
+      <main class="main-content" id="client-main">
+        <!-- الصفحة الرئيسية للعميل -->
+        <section id="client-home" class="page active">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <i class="fas fa-check-circle text-success"></i>
+              <div>
+                <span class="stat-num" id="client-completed">0</span>
+                <small>مكتملة</small>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-clock text-warning"></i>
+              <div>
+                <span class="stat-num" id="client-active">0</span>
+                <small>جارية</small>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-times-circle text-danger"></i>
+              <div>
+                <span class="stat-num" id="client-cancelled">0</span>
+                <small>ملغاة</small>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-lg btn-block create-order-btn" id="btn-create-order">
+            <i class="fas fa-plus-circle"></i> إنشاء طلب توصيل جديد
+          </button>
+
+          <div class="section-title">
+            <h3>الطلب الحالي</h3>
+          </div>
+          <div id="client-current-order" class="order-card empty-state">
+            <i class="fas fa-box-open"></i>
+            <p>لا يوجد طلب جاري حالياً</p>
+          </div>
+
+          <div class="section-title">
+            <h3>آخر الطلبات</h3>
+            <a href="#" class="link" data-page="client-orders">عرض الكل</a>
+          </div>
+          <div id="client-recent-orders" class="orders-list"></div>
+        </section>
+
+        <!-- إنشاء طلب -->
+        <section id="client-create" class="page">
+          <div class="page-header">
+            <button class="back-btn" data-page="client-home"><i class="fas fa-arrow-right"></i></button>
+            <h2>طلب توصيل جديد</h2>
+          </div>
+          <form id="create-order-form" class="order-form">
+            <div class="form-section">
+              <h4><i class="fas fa-map-marker-alt"></i> مكان الاستلام</h4>
+              <div class="map-container" id="pickup-map"></div>
+              <div class="form-group">
+                <input type="text" id="pickup-address" placeholder="اكتب العنوان أو حدد على الخريطة" required>
+              </div>
+              <input type="hidden" id="pickup-lat">
+              <input type="hidden" id="pickup-lng">
+            </div>
+
+            <div class="form-section">
+              <h4><i class="fas fa-map-pin"></i> مكان التسليم</h4>
+              <div class="map-container" id="dropoff-map"></div>
+              <div class="form-group">
+                <input type="text" id="dropoff-address" placeholder="اكتب العنوان أو حدد على الخريطة" required>
+              </div>
+              <input type="hidden" id="dropoff-lat">
+              <input type="hidden" id="dropoff-lng">
+              <div class="form-group">
+                <label>منطقة التسليم</label>
+                <select id="order-zone" required></select>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4><i class="fas fa-user"></i> بيانات المستلم</h4>
+              <div class="form-group">
+                <label>اسم المستلم</label>
+                <input type="text" id="receiver-name" required>
+              </div>
+              <div class="form-group">
+                <label>رقم هاتف المستلم</label>
+                <input type="tel" id="receiver-phone" required>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4><i class="fas fa-box"></i> تفاصيل الشحنة</h4>
+              <div class="form-group">
+                <label>نوع الشحنة</label>
+                <select id="package-type" required>
+                  <option value="documents">مستندات</option>
+                  <option value="food">طعام</option>
+                  <option value="electronics">إلكترونيات</option>
+                  <option value="clothes">ملابس</option>
+                  <option value="other">أخرى</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>وصف الشحنة</label>
+                <textarea id="package-desc" rows="2" placeholder="وصف مختصر للشحنة"></textarea>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>الوزن (كجم)</label>
+                  <input type="number" id="package-weight" min="0.1" step="0.1" value="1">
+                </div>
+                <div class="form-group">
+                  <label>الحجم</label>
+                  <select id="package-size">
+                    <option value="small">صغير</option>
+                    <option value="medium">متوسط</option>
+                    <option value="large">كبير</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>ملاحظات للمندوب</label>
+                <textarea id="order-notes" rows="2" placeholder="أي تعليمات خاصة"></textarea>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4><i class="fas fa-money-bill-wave"></i> طريقة الدفع</h4>
+              <div class="payment-options">
+                <label class="radio-card">
+                  <input type="radio" name="payment" value="cash" checked>
+                  <span><i class="fas fa-money-bill"></i> نقداً عند الاستلام</span>
+                </label>
+                <label class="radio-card">
+                  <input type="radio" name="payment" value="wallet">
+                  <span><i class="fas fa-wallet"></i> محفظة إلكترونية</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="order-summary" id="order-summary" style="display:none;">
+              <h4>ملخص الطلب</h4>
+              <div class="summary-row"><span>المسافة</span><strong id="sum-distance">-</strong></div>
+              <div class="summary-row"><span>التكلفة المتوقعة</span><strong id="sum-cost">-</strong></div>
+              <div class="summary-row"><span>طريقة الدفع</span><strong id="sum-payment">-</strong></div>
+            </div>
+
+            <button type="button" class="btn btn-outline btn-block" id="btn-calc-order">
+              <i class="fas fa-calculator"></i> حساب التكلفة
+            </button>
+            <button type="submit" class="btn btn-primary btn-block" id="btn-confirm-order" disabled>
+              <i class="fas fa-check"></i> تأكيد الطلب
+            </button>
+          </form>
+        </section>
+
+        <!-- تفاصيل الطلب -->
+        <section id="client-order-details" class="page">
+          <div class="page-header">
+            <button class="back-btn" data-page="client-home"><i class="fas fa-arrow-right"></i></button>
+            <h2>تفاصيل الطلب <span id="order-id-title"></span></h2>
+          </div>
+          <div class="order-details-content" id="order-details-content"></div>
+        </section>
+
+        <!-- تتبع الطلب -->
+        <section id="client-track" class="page">
+          <div class="page-header">
+            <button class="back-btn" data-page="client-order-details"><i class="fas fa-arrow-right"></i></button>
+            <h2>تتبع الطلب</h2>
+          </div>
+          <div class="track-map-container">
+            <div id="track-map" class="map-full"></div>
+          </div>
+          <div class="track-info" id="track-info"></div>
+        </section>
+
+        <!-- طلباتي -->
+        <section id="client-orders" class="page">
+          <div class="page-header">
+            <button class="back-btn" data-page="client-home"><i class="fas fa-arrow-right"></i></button>
+            <h2>طلباتي</h2>
+          </div>
+          <div class="tabs">
+            <button class="tab active" data-filter="all">الكل</button>
+            <button class="tab" data-filter="active">جارية</button>
+            <button class="tab" data-filter="completed">مكتملة</button>
+            <button class="tab" data-filter="cancelled">ملغاة</button>
+          </div>
+          <div id="client-orders-list" class="orders-list"></div>
+        </section>
+
+        <!-- الملف الشخصي -->
+        <section id="client-profile" class="page">
+          <div class="page-header">
+            <button class="back-btn" data-page="client-home"><i class="fas fa-arrow-right"></i></button>
+            <h2>الملف الشخصي</h2>
+          </div>
+          <div class="profile-card" id="client-profile-content"></div>
+        </section>
+
+        <!-- الإشعارات -->
+        <section id="client-notifications" class="page">
+          <div class="page-header">
+            <button class="back-btn" data-page="client-home"><i class="fas fa-arrow-right"></i></button>
+            <h2>الإشعارات</h2>
+          </div>
+          <div id="client-notif-list" class="notif-list"></div>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" id="client-nav">
+        <button class="nav-item active" data-page="client-home"><i class="fas fa-home"></i><span>الرئيسية</span></button>
+        <button class="nav-item" data-page="client-orders"><i class="fas fa-list"></i><span>طلباتي</span></button>
+        <button class="nav-item" data-page="client-create"><i class="fas fa-plus-circle"></i><span>طلب جديد</span></button>
+        <button class="nav-item" data-page="client-notifications"><i class="fas fa-bell"></i><span>إشعارات</span></button>
+        <button class="nav-item" data-page="client-profile"><i class="fas fa-user"></i><span>حسابي</span></button>
+      </nav>
+    </div>
+
+    <!-- واجهة المندوب -->
+    <div id="courier-screen" class="screen">
+      <header class="app-header">
+        <div class="header-right">
+          <div class="user-info">
+            <img src="https://ui-avatars.com/api/?name=مندوب&background=0369a1&color=fff" class="avatar" id="courier-avatar">
+            <div>
+              <span class="user-name" id="courier-name">مندوب</span>
+              <small id="courier-status-text">غير متصل</small>
+            </div>
+          </div>
+        </div>
+        <div class="header-left">
+          <label class="switch">
+            <input type="checkbox" id="courier-online-toggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </header>
+
+      <main class="main-content" id="courier-main">
+        <section id="courier-home" class="page active">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <i class="fas fa-coins text-success"></i>
+              <div>
+                <span class="stat-num" id="courier-earnings">0</span>
+                <small>ج.م أرباح</small>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-check-double text-primary"></i>
+              <div>
+                <span class="stat-num" id="courier-done">0</span>
+                <small>منجزة</small>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-star text-warning"></i>
+              <div>
+                <span class="stat-num" id="courier-rating">5.0</span>
+                <small>التقييم</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-title"><h3>الطلب الحالي</h3></div>
+          <div id="courier-current-order" class="order-card empty-state">
+            <i class="fas fa-motorcycle"></i>
+            <p>لا يوجد طلب حالياً</p>
+          </div>
+
+          <div class="section-title"><h3>الطلبات المتاحة</h3></div>
+          <div id="courier-available-orders" class="orders-list"></div>
+        </section>
+
+        <section id="courier-execute" class="page">
+          <div class="page-header">
+            <button class="back-btn" data-page="courier-home"><i class="fas fa-arrow-right"></i></button>
+            <h2>تنفيذ الطلب</h2>
+          </div>
+          <div id="courier-execute-content"></div>
+        </section>
+
+        <section id="courier-orders" class="page">
+          <div class="page-header">
+            <button class="back-btn" data-page="courier-home"><i class="fas fa-arrow-right"></i></button>
+            <h2>طلباتي</h2>
+          </div>
+          <div id="courier-orders-list" class="orders-list"></div>
+        </section>
+
+        <section id="courier-profile" class="page">
+          <div class="page-header">
+            <button class="back-btn" data-page="courier-home"><i class="fas fa-arrow-right"></i></button>
+            <h2>الملف الشخصي</h2>
+          </div>
+          <div class="profile-card" id="courier-profile-content"></div>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" id="courier-nav">
+        <button class="nav-item active" data-page="courier-home"><i class="fas fa-home"></i><span>الرئيسية</span></button>
+        <button class="nav-item" data-page="courier-orders"><i class="fas fa-list"></i><span>طلباتي</span></button>
+        <button class="nav-item" data-page="courier-profile"><i class="fas fa-user"></i><span>حسابي</span></button>
+      </nav>
+    </div>
+
+    <!-- واجهة المدير -->
+    <div id="admin-screen" class="screen">
+      <aside class="sidebar" id="admin-sidebar">
+        <div class="sidebar-header">
+          <i class="fas fa-shipping-fast"></i>
+          <span>لوحة التحكم</span>
+        </div>
+        <nav class="sidebar-nav">
+          <button class="side-item active" data-page="admin-dashboard"><i class="fas fa-chart-pie"></i> الإحصائيات</button>
+          <button class="side-item" data-page="admin-orders"><i class="fas fa-box"></i> الطلبات</button>
+          <button class="side-item" data-page="admin-clients"><i class="fas fa-users"></i> العملاء</button>
+          <button class="side-item" data-page="admin-couriers"><i class="fas fa-motorcycle"></i> المندوبين</button>
+          <button class="side-item" data-page="admin-zones"><i class="fas fa-map-marked-alt"></i> المناطق</button>
+          <button class="side-item" data-page="admin-map"><i class="fas fa-map"></i> الخريطة</button>
+          <button class="side-item" id="admin-logout"><i class="fas fa-sign-out-alt"></i> خروج</button>
+        </nav>
+      </aside>
+
+      <div class="admin-main">
+        <header class="admin-header">
+          <button class="icon-btn mobile-only" id="sidebar-toggle"><i class="fas fa-bars"></i></button>
+          <h2 id="admin-page-title">الإحصائيات</h2>
+          <div class="admin-user">
+            <span>مدير النظام</span>
+            <img src="https://ui-avatars.com/api/?name=Admin&background=7c3aed&color=fff" class="avatar-sm">
+          </div>
+        </header>
+
+        <main class="admin-content">
+          <section id="admin-dashboard" class="page active">
+            <div class="stats-grid admin-stats">
+              <div class="stat-card large">
+                <i class="fas fa-users"></i>
+                <div>
+                  <span class="stat-num" id="admin-total-clients">0</span>
+                  <small>إجمالي العملاء</small>
+                </div>
+              </div>
+              <div class="stat-card large">
+                <i class="fas fa-motorcycle"></i>
+                <div>
+                  <span class="stat-num" id="admin-total-couriers">0</span>
+                  <small>إجمالي المندوبين</small>
+                </div>
+              </div>
+              <div class="stat-card large">
+                <i class="fas fa-box"></i>
+                <div>
+                  <span class="stat-num" id="admin-active-orders">0</span>
+                  <small>طلبات جارية</small>
+                </div>
+              </div>
+              <div class="stat-card large">
+                <i class="fas fa-check-circle"></i>
+                <div>
+                  <span class="stat-num" id="admin-completed-orders">0</span>
+                  <small>طلبات مكتملة</small>
+                </div>
+              </div>
+              <div class="stat-card large">
+                <i class="fas fa-times-circle"></i>
+                <div>
+                  <span class="stat-num" id="admin-cancelled-orders">0</span>
+                  <small>طلبات ملغاة</small>
+                </div>
+              </div>
+              <div class="stat-card large">
+                <i class="fas fa-money-bill-wave"></i>
+                <div>
+                  <span class="stat-num" id="admin-total-revenue">0</span>
+                  <small>إجمالي القيمة (ج.م)</small>
+                </div>
+              </div>
+            </div>
+            <div class="section-title"><h3>طلبات اليوم</h3></div>
+            <div id="admin-today-orders" class="table-responsive"></div>
+          </section>
+
+          <section id="admin-orders" class="page">
+            <div class="toolbar">
+              <input type="search" id="admin-order-search" placeholder="بحث برقم الطلب أو الاسم...">
+              <select id="admin-order-filter">
+                <option value="all">كل الحالات</option>
+                <option value="pending">بانتظار الموافقة</option>
+                <option value="searching">جاري البحث</option>
+                <option value="accepted">تم تعيين مندوب</option>
+                <option value="picked_up">في الطريق للتسليم</option>
+                <option value="completed">مكتمل</option>
+                <option value="cancelled">ملغي</option>
+              </select>
+            </div>
+            <div id="admin-orders-table" class="table-responsive"></div>
+          </section>
+
+          <section id="admin-clients" class="page">
+            <div class="toolbar">
+              <input type="search" id="admin-client-search" placeholder="بحث عن عميل...">
+            </div>
+            <div id="admin-clients-table" class="table-responsive"></div>
+          </section>
+
+          <section id="admin-couriers" class="page">
+            <div class="toolbar">
+              <input type="search" id="admin-courier-search" placeholder="بحث عن مندوب...">
+              <select id="admin-courier-status">
+                <option value="all">الكل</option>
+                <option value="online">متصل</option>
+                <option value="offline">غير متصل</option>
+              </select>
+            </div>
+            <div id="admin-couriers-table" class="table-responsive"></div>
+          </section>
+
+          <section id="admin-zones" class="page">
+            <div class="page-header">
+              <h2>مناطق التغطية - مدينة العاشر من رمضان</h2>
+              <button class="btn btn-primary" onclick="window.zoneModal('')"><i class="fas fa-plus"></i> إضافة منطقة</button>
+            </div>
+            <div id="admin-zones-table" class="table-responsive"></div>
+          </section>
+
+          <section id="admin-map" class="page">
+            <div id="admin-map-container" class="map-full admin-map"></div>
+            <div class="map-legend">
+              <span><i class="fas fa-motorcycle text-success"></i> مندوب متصل</span>
+              <span><i class="fas fa-box text-primary"></i> طلب جاري</span>
+            </div>
+          </section>
+
+          <!-- تفاصيل طلب للإدارة (قبول/رفض) -->
+          <section id="admin-order-details" class="page">
+            <div class="page-header">
+              <button class="back-btn" data-page="admin-orders"><i class="fas fa-arrow-right"></i></button>
+              <h2>إدارة الطلب</h2>
+            </div>
+            <div id="admin-order-details-content"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <!-- نوافذ منبثقة -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title"></h3>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-footer" id="modal-footer"></div>
+    </div>
+  </div>
+
+  <!-- توست -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(function(){});
+    }
+  </script>
+</body>
+</html>
