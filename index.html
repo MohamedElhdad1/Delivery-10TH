@@ -354,6 +354,13 @@
           <div id="client-orders-list" class="orders-list"></div>
         </section>
 
+
+        <section id="client-ranking" class="page">
+          <div class="page-header"><button class="back-btn" data-page="client-home"><i class="fas fa-arrow-right"></i></button><h2><i class="fas fa-trophy"></i> ترتيب المستخدمين</h2></div>
+          <div class="ranking-hero"><i class="fas fa-gift"></i><div><b>ترتيب الشهر</b><p>أكثر العملاء استخداماً للتطبيق يدخلون السحب على هدية شهرية من الإدارة.</p></div><span id="client-ranking-month"></span></div>
+          <div id="client-ranking-me" class="ranking-me"></div>
+          <div id="client-ranking-list" class="ranking-list"></div>
+        </section>
         <!-- الملف الشخصي -->
         <section id="client-profile" class="page">
           <div class="page-header">
@@ -385,7 +392,7 @@
         <button class="nav-item active" data-page="client-home"><i class="fas fa-home"></i><span>الرئيسية</span></button>
         <button class="nav-item" data-page="client-orders"><i class="fas fa-list"></i><span>طلباتي</span></button>
         <button class="nav-item" data-page="client-create"><i class="fas fa-plus-circle"></i><span>طلب جديد</span></button>
-        <button class="nav-item" data-page="client-chat"><i class="fas fa-comments"></i><span>الدعم</span></button><button class="nav-item" data-page="client-notifications"><i class="fas fa-bell"></i><span>إشعارات</span></button>
+        <button class="nav-item" data-page="client-chat"><i class="fas fa-comments"></i><span>الدعم</span></button><button class="nav-item" data-page="client-ranking"><i class="fas fa-trophy"></i><span>الترتيب</span></button><button class="nav-item" data-page="client-notifications"><i class="fas fa-bell"></i><span>إشعارات</span></button>
         <button class="nav-item" data-page="client-profile"><i class="fas fa-user"></i><span>حسابي</span></button>
       </nav>
     </div>
@@ -499,7 +506,7 @@
           <button class="side-item" data-page="admin-couriers"><i class="fas fa-motorcycle"></i> المندوبين</button>
           <button class="side-item" data-page="admin-zones"><i class="fas fa-map-marked-alt"></i> المناطق</button>
           <button class="side-item" data-page="admin-database"><i class="fas fa-database"></i> قاعدة البيانات</button>
-          <button class="side-item" data-page="admin-map"><i class="fas fa-map"></i> الخريطة</button><button class="side-item" data-page="admin-support"><i class="fas fa-headset"></i> الدعم والمحادثات</button>
+          <button class="side-item" data-page="admin-map"><i class="fas fa-map"></i> الخريطة</button><button class="side-item" data-page="admin-support"><i class="fas fa-headset"></i> الدعم والمحادثات</button><button class="side-item" data-page="admin-ranking"><i class="fas fa-trophy"></i> ترتيب العملاء والهدايا</button>
           <button class="side-item" id="admin-logout"><i class="fas fa-sign-out-alt"></i> خروج</button>
         </nav>
       </aside>
@@ -642,6 +649,12 @@
             </div>
           </section>
 
+
+          <section id="admin-ranking" class="page">
+            <div class="page-header"><div><h2><i class="fas fa-trophy"></i> ترتيب العملاء والهدايا</h2><p class="muted">الترتيب الشهري يعتمد على عدد الطلبات المكتملة، وعند التعادل يُستخدم إجمالي الإنفاق.</p></div><span class="ranking-month" id="admin-ranking-month"></span></div>
+            <div class="ranking-policy"><i class="fas fa-gift"></i><span>يمكنك منح الهدية لكل عميل من نفس الجدول، وسيصل إليه إشعار فوري.</span></div>
+            <div id="admin-ranking-table" class="table-responsive"></div>
+          </section>
           <section id="admin-map" class="page">
             <div id="admin-map-container" class="map-full admin-map"></div>
             <div class="map-legend">
