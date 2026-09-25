@@ -20,11 +20,11 @@
 */
 window.FIREBASE_CONFIG = {
 
-   apiKey: "AIzaSyC544YxggY8FLZmvJnk-lf5KfspqbopGZs",
-  authDomain: "delivery-10th.firebaseapp.com",
-  projectId: "delivery-10th",
-  storageBucket: "delivery-10th.firebasestorage.app",
-  messagingSenderId: "323841266616",
-  appId: "1:323841266616:web:a2b6250d9b12efd61af54d",
-  measurementId: "G-7TW6DK29T7"
+   apiKey: "AIzaSyCoULVGF_0OHNKFMOhRsrCF3qrAq3sH9_Q",
+  authDomain: "delivery-10th-2deef.firebaseapp.com",
+  projectId: "delivery-10th-2deef",
+  storageBucket: "delivery-10th-2deef.firebasestorage.app",
+  messagingSenderId: "792094138758",
+  appId: "1:792094138758:web:5a12c11380e6a41aa30c07",
+  measurementId: "G-ZCVSCHFP6J"
 };
