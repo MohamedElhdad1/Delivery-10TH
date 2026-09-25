@@ -19,11 +19,12 @@ async function restoreSession(){
   const u=await DB.get('users',session.userId);
   if(!u || u.status!=='active'){localStorage.removeItem('delivery_session');return false;}
   currentUser={...u,passwordHash:undefined,sessionId:sid};
-  showScreen(currentUser.role); await refresh();
+  showScreen(currentUser.role); await refresh(); await setupRealtime();
   return true;
  }catch(e){localStorage.removeItem('delivery_session');return false;}
 }
 async function init(){
+  wireSupportUI();
  try{
   const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('التطبيق ماقدرش يتصل بقاعدة البيانات خلال '+(ms/1000)+' ثواني. تأكد إن فيه إنترنت وإن إعدادات Firebase داخل data.js صحيحة وإن الرابط مفتوح من سيرفر (مش بفتح الملف مباشرة من جهازك).')),ms))]);
   await withTimeout(DB.open(),10000);
@@ -48,9 +49,9 @@ async function init(){
  await restoreSession();
  setTimeout(()=>{const s=$('splash');if(s)s.style.display='none';$('app')?.classList.remove('hidden')},400);
 }
-async function doLogin(e){e.preventDefault();try{currentUser=await DB.login($('login-phone').value,$('login-password').value,$('login-role').value);localStorage.setItem('delivery_session',currentUser.sessionId);showScreen(currentUser.role);await refresh();toast('تم تسجيل الدخول');}catch(err){toast(err.message,'error')}}
+async function doLogin(e){e.preventDefault();try{currentUser=await DB.login($('login-phone').value,$('login-password').value,$('login-role').value);localStorage.setItem('delivery_session',currentUser.sessionId);showScreen(currentUser.role);await refresh();await setupRealtime();toast('تم تسجيل الدخول');}catch(err){toast(err.message,'error')}}
 async function doRegister(e){e.preventDefault();try{const role=$('reg-role').value;await DB.createUser({name:$('reg-name').value,phone:$('reg-phone').value,password:$('reg-password').value,role});toast('تم إنشاء الحساب ويمكنك تسجيل الدخول');e.target.reset();document.querySelector('[data-tab="login"]').click()}catch(err){toast(err.message,'error')}}
-function logout(){currentUser=null;localStorage.removeItem('delivery_session');showScreen('auth');toast('تم تسجيل الخروج')}
+function logout(){try{DB.touchPresence(currentUser.id,false);if(currentUser?.role==='admin')DB.put('support_presence',{id:currentUser.id,role:'admin',online:false,callOpen:false,updatedAt:DB.now()});DB.stopAllListeners()}catch(e){}stopRealtime();currentUser=null;localStorage.removeItem('delivery_session');showScreen('auth');toast('تم تسجيل الخروج')}
 async function renderAdmin(){
  const users=await DB.all('users'),orders=await DB.all('orders');
  $('admin-total-clients').textContent=users.filter(x=>x.role==='client').length;$('admin-total-couriers').textContent=users.filter(x=>x.role==='courier').length;
@@ -178,5 +179,80 @@ window.adminDbDelete=async id=>{
 function initAdminMap(){if(typeof L==='undefined'||adminMap)return;adminMap=L.map('admin-map-container').setView([30.2989,31.7414],11);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(adminMap);DB.all('users').then(users=>users.filter(x=>x.role==='courier'&&x.online).forEach(u=>{if(u.lat&&u.lng)L.marker([u.lat,u.lng]).addTo(adminMap).bindPopup(u.name)}));}
 // إضافة إدارة المديرين للقائمة حتى لو لم تكن موجودة في HTML الأصلي
 function injectAdminManagers(){const nav=document.querySelector('#admin-sidebar .sidebar-nav');if(nav&&!$('nav-admin-managers')){const b=document.createElement('button');b.id='nav-admin-managers';b.className='side-item';b.dataset.page='admin-managers';b.innerHTML='<i class="fas fa-user-shield"></i> إدارة المديرين';b.onclick=()=>go('admin-managers');nav.insertBefore(b,nav.querySelector('#admin-logout'));const s=document.createElement('section');s.id='admin-managers';s.className='page';s.innerHTML='<div class="page-header"><h2>إدارة المديرين</h2><button class="btn btn-primary" onclick="adminManagerUI()"><i class="fas fa-user-plus"></i> إنشاء حساب مدير</button></div><div id="admin-managers-table" class="table-responsive"></div>';$('admin-screen').querySelector('.admin-content').appendChild(s)}}
+
+// ===== REALTIME + SUPPORT CHAT/CALL =====
+let realtimeUnsubs=[], activeSupportThread=null, callState={pc:null,local:null,remote:null,thread:null};
+function stopRealtime(){realtimeUnsubs.forEach(u=>{try{u()}catch(e){}});realtimeUnsubs=[];try{DB.stopAllListeners()}catch(e){}}
+function threadIdFor(userId){return 'support_'+userId+'_admin'}
+async function setupRealtime(){
+  stopRealtime(); if(!currentUser)return;
+  const rerender=()=>{ if(currentUser.role==='admin') refresh(); else refresh(); renderSupportIfOpen(); };
+  ['users','orders','zones','settings','notifications'].forEach(col=>realtimeUnsubs.push(DB.listen(col,()=>rerender(),()=>{})));
+  realtimeUnsubs.push(DB.listen('messages',()=>renderSupportIfOpen(),()=>{}));
+  realtimeUnsubs.push(DB.listen('support_presence',rows=>{window.__supportPresence=rows;updateSupportStatus()},()=>{}));
+  realtimeUnsubs.push(DB.listen('call_requests',rows=>{window.__callRequests=rows;handleIncomingCallRequests(rows)},()=>{}));
+  try{await DB.touchPresence(currentUser.id,true); if(currentUser.role==='admin') await DB.put('support_presence',{id:currentUser.id,role:'admin',online:true,callOpen:false,updatedAt:DB.now()});}catch(e){}
+}
+function updateSupportStatus(){
+  const admins=(window.__supportPresence||[]).filter(x=>x.role==='admin'&&x.online); const online=admins.length>0;
+  ['client','courier'].forEach(role=>{const st=$(role+'-admin-status'),dot=$(role+'-admin-status-dot'),btn=$(role+'-call-btn');if(st){st.textContent=online?'الإدارة متصلة الآن':'الإدارة غير متصلة حالياً';}if(dot)dot.className='status-dot '+(online?'online':'offline');if(btn)btn.disabled=!online;});
+}
+async function openSupport(role){go(role+'-chat');await renderSupportChat(currentUser.id);}
+async function renderSupportChat(userId){
+  const msgs=(await DB.all('messages')).filter(m=>m.threadId===threadIdFor(userId)).sort((a,b)=>String(a.createdAt).localeCompare(String(b.createdAt)));
+  const box=$('client-chat-messages')||$('courier-chat-messages')||$('admin-chat-messages'); if(!box)return;
+  box.innerHTML=msgs.length?msgs.map(m=>`<div class="chat-bubble ${m.senderId===currentUser.id?'mine':'theirs'}"><div>${esc(m.text)}</div><small>${fmtDate(m.createdAt)}</small></div>`).join(''):empty('ابدأ المحادثة مع الإدارة');
+  box.scrollTop=box.scrollHeight;
+}
+async function sendSupportMessage(userId,textMsg){const t=String(textMsg||'').trim();if(!t)return;const tid=threadIdFor(userId);await DB.put('messages',{id:DB.uid('msg'),threadId:tid,senderId:currentUser.role==='admin'?currentUser.id:userId,recipientId:currentUser.role==='admin'?userId:null,text:t,createdAt:DB.now(),read:false});}
+async function renderSupportIfOpen(){
+ if(!currentUser)return;
+ if(currentUser.role==='client'&&$('client-chat')?.classList.contains('active')) return renderSupportChat(currentUser.id);
+ if(currentUser.role==='courier'&&$('courier-chat')?.classList.contains('active')) return renderSupportChat(currentUser.id);
+ if(currentUser.role==='admin'&&$('admin-support')?.classList.contains('active')) return renderAdminSupport();
+}
+async function renderAdminSupport(){
+ const users=(await DB.all('users')).filter(u=>u.role!=='admin'); const msgs=await DB.all('messages');
+ const threads=users.map(u=>{const ms=msgs.filter(m=>m.threadId===threadIdFor(u.id));const last=ms.sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))[0];return {u,last}}).sort((a,b)=>String(b.last?.createdAt||'').localeCompare(String(a.last?.createdAt||'')));
+ const list=$('support-threads'); if(!list)return; list.innerHTML=threads.map(({u,last})=>`<button class="support-thread ${activeSupportThread===u.id?'active':''}" onclick="window.openAdminThread('${u.id}')"><i class="fas fa-user-circle"></i><span><b>${esc(u.name)}</b><small>${esc(last?.text||'لا توجد رسائل')}</small></span></button>`).join('')||empty('لا توجد محادثات');
+ if(activeSupportThread){const u=await DB.get('users',activeSupportThread);if(u){$('admin-chat-header').innerHTML=`<i class="fas fa-user-circle"></i> ${esc(u.name)} <small>${u.phone||''}</small>`;const ms=msgs.filter(m=>m.threadId===threadIdFor(u.id)).sort((a,b)=>String(a.createdAt).localeCompare(String(b.createdAt)));$('admin-chat-messages').innerHTML=ms.length?ms.map(m=>`<div class="chat-bubble ${m.senderId===currentUser.id?'mine':'theirs'}"><div>${esc(m.text)}</div><small>${fmtDate(m.createdAt)}</small></div>`).join(''):empty('ابدأ المحادثة');const b=$('admin-chat-messages');b.scrollTop=b.scrollHeight;}}
+}
+window.openAdminThread=async id=>{activeSupportThread=id;go('admin-support');await renderAdminSupport()};
+async function startCall(userId){
+ const online=(window.__supportPresence||[]).some(x=>x.role==='admin'&&x.online); if(!online)return toast('الإدارة غير متصلة الآن','error');
+ const open=(await DB.all('support_presence')).some(x=>x.role==='admin'&&x.online&&x.callOpen); if(!open)return toast('الإدارة غير متاحة للمكالمات حالياً','error');
+ const id=DB.uid('call');await DB.put('call_requests',{id,threadId:threadIdFor(userId),userId,adminId:null,status:'ringing',createdAt:DB.now()});toast('تم طلب الاتصال من الإدارة');
+}
+async function handleIncomingCallRequests(rows){
+ if(!currentUser)return;
+ if(currentUser.role==='admin'){
+   const req=rows.filter(r=>r.status==='ringing'&&(!r.adminId||r.adminId===currentUser.id));const latest=req.sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))[0];
+   if(!latest||window.__lastCallReq===latest.id)return;window.__lastCallReq=latest.id;const u=await DB.get('users',latest.userId);
+   if(u&&confirm(`مكالمة واردة من ${u.name}. قبول الاتصال؟`)){await DB.put('call_requests',{...latest,status:'accepted',adminId:currentUser.id});await openWebCall(latest.userId,true)}else if(u){await DB.put('call_requests',{...latest,status:'declined',adminId:currentUser.id})}
+ } else {
+   const accepted=rows.filter(r=>r.userId===currentUser.id&&r.status==='accepted').sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))[0];
+   if(accepted&&window.__acceptedCall!==accepted.id){window.__acceptedCall=accepted.id;await openWebCall(accepted.adminId,false)}
+ }
+}
+async function openWebCall(peerId,isAdmin){
+ if(!window.RTCPeerConnection||!navigator.mediaDevices)return toast('الاتصال الصوتي غير مدعوم على هذا الجهاز','error');
+ const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});callState.pc=pc;callState.thread=threadIdFor(peerId);callState.remote=new MediaStream();
+ const audio=document.createElement('audio');audio.autoplay=true;audio.srcObject=callState.remote;audio.id='active-call-audio';document.body.appendChild(audio);
+ const local=await navigator.mediaDevices.getUserMedia({audio:true});callState.local=local;local.getTracks().forEach(t=>pc.addTrack(t,local));pc.ontrack=e=>e.streams[0].getTracks().forEach(t=>callState.remote.addTrack(t));
+ const signalId=DB.uid('sig');const unsub=DB.listen('call_signals',async rows=>{for(const x of rows.filter(x=>x.threadId===callState.thread&&x.to===currentUser.id&&!x.consumed)){try{if(x.type==='offer')await pc.setRemoteDescription(x.data);if(x.type==='answer')await pc.setRemoteDescription(x.data);if(x.type==='candidate')await pc.addIceCandidate(x.data);await DB.put('call_signals',{...x,consumed:true})}catch(e){}}});realtimeUnsubs.push(unsub);
+ pc.onicecandidate=e=>{if(e.candidate)DB.put('call_signals',{id:DB.uid('sig'),threadId:callState.thread,to:peerId,from:currentUser.id,type:'candidate',data:e.candidate.toJSON(),consumed:false,createdAt:DB.now()})};
+ if(isAdmin){const offer=await pc.createOffer();await pc.setLocalDescription(offer);await DB.put('call_signals',{id:signalId,threadId:callState.thread,to:peerId,from:currentUser.id,type:'offer',data:{type:offer.type,sdp:offer.sdp},consumed:false,createdAt:DB.now()})}
+ else { const offers=(await DB.all('call_signals')).filter(x=>x.threadId===callState.thread&&x.to===currentUser.id&&x.type==='offer'&&!x.consumed).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))); const offer=offers[0]; if(offer){await pc.setRemoteDescription(offer.data);await DB.put('call_signals',{...offer,consumed:true});const answer=await pc.createAnswer();await pc.setLocalDescription(answer);await DB.put('call_signals',{id:DB.uid('sig'),threadId:callState.thread,to:peerId,from:currentUser.id,type:'answer',data:{type:answer.type,sdp:answer.sdp},consumed:false,createdAt:DB.now()})}}
+ showCallOverlay(peerId);
+}
+function showCallOverlay(peerId){if($('call-overlay'))return;const d=document.createElement('div');d.id='call-overlay';d.className='call-overlay';d.innerHTML='<div class="call-card"><i class="fas fa-phone-volume call-icon"></i><h3>اتصال صوتي</h3><p>المكالمة متصلة</p><button class="btn btn-danger" onclick="window.endWebCall()"><i class="fas fa-phone-slash"></i> إنهاء الاتصال</button></div>';document.body.appendChild(d)}
+window.endWebCall=async()=>{try{callState.local?.getTracks().forEach(t=>t.stop());callState.pc?.close()}catch(e){}callState={pc:null,local:null,remote:null,thread:null};$('active-call-audio')?.remove();$('call-overlay')?.remove()};
+function wireSupportUI(){
+ $('client-chat-btn')?.addEventListener('click',()=>openSupport('client'));$('courier-chat-btn')?.addEventListener('click',()=>openSupport('courier'));
+ [['client','client'],['courier','courier']].forEach(([r])=>{const inp=$(r+'-chat-input'),send=$(r+'-chat-send'),call=$(r+'-call-btn');send?.addEventListener('click',async()=>{await sendSupportMessage(currentUser.id,inp.value);inp.value='';renderSupportChat(currentUser.id)});inp?.addEventListener('keydown',e=>{if(e.key==='Enter')send.click()});call?.addEventListener('click',()=>startCall(currentUser.id));});
+ $('admin-chat-send')?.addEventListener('click',async()=>{if(!activeSupportThread)return;const inp=$('admin-chat-input');await sendSupportMessage(activeSupportThread,inp.value);inp.value='';renderAdminSupport()});$('admin-chat-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')$('admin-chat-send').click()});
+ $('admin-call-open')?.addEventListener('change',async e=>{await DB.put('support_presence',{id:currentUser.id,role:'admin',online:true,callOpen:e.target.checked,updatedAt:DB.now()});toast(e.target.checked?'تم فتح استقبال المكالمات':'تم إغلاق استقبال المكالمات')});
+}
+
 window.addEventListener('DOMContentLoaded',async()=>{injectAdminManagers();await init()});window.go=go;window.closeModal=closeModal;window.adminManagerUI=adminManagerUI;window.adminDbRefresh=renderAdminDatabase;window.logout=logout;
 })();

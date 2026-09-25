@@ -85,6 +85,26 @@
     const snap = await db.collection(store).get();
     return snap.size;
   }
+  function listen(store, callback, errorCallback) {
+    let active = true;
+    ensureFirebase().then(()=>{
+      if(!active) return;
+      const unsub=db.collection(store).onSnapshot(snap=>{
+        if(!active)return;
+        callback(snap.docs.map(d=>d.data()), snap);
+      }, err=>{ if(errorCallback) errorCallback(err); });
+      if(!active) unsub();
+      else listen._unsubs.push(unsub);
+    }).catch(e=>errorCallback&&errorCallback(e));
+    return ()=>{ active=false; };
+  }
+  listen._unsubs=[];
+  function stopAllListeners(){ listen._unsubs.splice(0).forEach(u=>{try{u()}catch(e){}}); }
+  async function touchPresence(userId, online=true){
+    const u=await get('users',userId); if(!u)return;
+    await put('users',{...u,online:!!online,lastSeen:now(),updatedAt:now()});
+  }
+
 
   const now = () => new Date().toISOString();
   const uid = (p) => p + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
@@ -143,5 +163,5 @@
     await del('users', id); await log(actor, 'delete_user', 'حذف حساب', { userId: id });
   }
 
-  window.DB = { open, seed, all, get, put, add, del, clear, count, login, createUser, updateUser, deleteUser, notify, log, hash, normalizePhone, now, uid };
+  window.DB = { open, seed, all, get, put, add, del, clear, count, listen, stopAllListeners, touchPresence, login, createUser, updateUser, deleteUser, notify, log, hash, normalizePhone, now, uid };
 })();

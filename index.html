@@ -159,7 +159,7 @@
             <i class="fas fa-bell"></i>
             <span class="badge" id="client-notif-count">0</span>
           </button>
-          <button class="icon-btn" id="client-menu-btn"><i class="fas fa-bars"></i></button>
+          <button class="icon-btn" id="client-chat-btn" title="محادثة الإدارة"><i class="fas fa-comments"></i></button><button class="icon-btn" id="client-menu-btn"><i class="fas fa-bars"></i></button>
         </div>
       </header>
 
@@ -363,6 +363,14 @@
           <div class="profile-card" id="client-profile-content"></div>
         </section>
 
+        <!-- محادثة الإدارة -->
+        <section id="client-chat" class="page">
+          <div class="page-header"><button class="back-btn" data-page="client-home"><i class="fas fa-arrow-right"></i></button><h2><i class="fas fa-headset"></i> الدعم والإدارة</h2></div>
+          <div class="support-status"><span id="client-admin-status-dot" class="status-dot"></span><span id="client-admin-status">جاري التحقق من اتصال الإدارة...</span></div>
+          <div id="client-chat-messages" class="chat-messages"></div>
+          <div class="chat-compose"><input id="client-chat-input" placeholder="اكتب رسالتك للإدارة..." autocomplete="off"><button class="btn btn-primary" id="client-chat-send"><i class="fas fa-paper-plane"></i></button><button class="btn btn-success" id="client-call-btn"><i class="fas fa-phone"></i></button></div>
+        </section>
+
         <!-- الإشعارات -->
         <section id="client-notifications" class="page">
           <div class="page-header">
@@ -377,7 +385,7 @@
         <button class="nav-item active" data-page="client-home"><i class="fas fa-home"></i><span>الرئيسية</span></button>
         <button class="nav-item" data-page="client-orders"><i class="fas fa-list"></i><span>طلباتي</span></button>
         <button class="nav-item" data-page="client-create"><i class="fas fa-plus-circle"></i><span>طلب جديد</span></button>
-        <button class="nav-item" data-page="client-notifications"><i class="fas fa-bell"></i><span>إشعارات</span></button>
+        <button class="nav-item" data-page="client-chat"><i class="fas fa-comments"></i><span>الدعم</span></button><button class="nav-item" data-page="client-notifications"><i class="fas fa-bell"></i><span>إشعارات</span></button>
         <button class="nav-item" data-page="client-profile"><i class="fas fa-user"></i><span>حسابي</span></button>
       </nav>
     </div>
@@ -394,7 +402,7 @@
             </div>
           </div>
         </div>
-        <div class="header-left">
+        <div class="header-left"><button class="icon-btn" id="courier-chat-btn" title="محادثة الإدارة"><i class="fas fa-comments"></i></button>
           <label class="switch">
             <input type="checkbox" id="courier-online-toggle">
             <span class="slider"></span>
@@ -454,6 +462,13 @@
           <div id="courier-orders-list" class="orders-list"></div>
         </section>
 
+        <section id="courier-chat" class="page">
+          <div class="page-header"><button class="back-btn" data-page="courier-home"><i class="fas fa-arrow-right"></i></button><h2><i class="fas fa-headset"></i> الدعم والإدارة</h2></div>
+          <div class="support-status"><span id="courier-admin-status-dot" class="status-dot"></span><span id="courier-admin-status">جاري التحقق من اتصال الإدارة...</span></div>
+          <div id="courier-chat-messages" class="chat-messages"></div>
+          <div class="chat-compose"><input id="courier-chat-input" placeholder="اكتب رسالتك للإدارة..." autocomplete="off"><button class="btn btn-primary" id="courier-chat-send"><i class="fas fa-paper-plane"></i></button><button class="btn btn-success" id="courier-call-btn"><i class="fas fa-phone"></i></button></div>
+        </section>
+
         <section id="courier-profile" class="page">
           <div class="page-header">
             <button class="back-btn" data-page="courier-home"><i class="fas fa-arrow-right"></i></button>
@@ -466,7 +481,7 @@
       <nav class="bottom-nav" id="courier-nav">
         <button class="nav-item active" data-page="courier-home"><i class="fas fa-home"></i><span>الرئيسية</span></button>
         <button class="nav-item" data-page="courier-orders"><i class="fas fa-list"></i><span>طلباتي</span></button>
-        <button class="nav-item" data-page="courier-profile"><i class="fas fa-user"></i><span>حسابي</span></button>
+        <button class="nav-item" data-page="courier-chat"><i class="fas fa-comments"></i><span>الدعم</span></button><button class="nav-item" data-page="courier-profile"><i class="fas fa-user"></i><span>حسابي</span></button>
       </nav>
     </div>
 
@@ -484,7 +499,7 @@
           <button class="side-item" data-page="admin-couriers"><i class="fas fa-motorcycle"></i> المندوبين</button>
           <button class="side-item" data-page="admin-zones"><i class="fas fa-map-marked-alt"></i> المناطق</button>
           <button class="side-item" data-page="admin-database"><i class="fas fa-database"></i> قاعدة البيانات</button>
-          <button class="side-item" data-page="admin-map"><i class="fas fa-map"></i> الخريطة</button>
+          <button class="side-item" data-page="admin-map"><i class="fas fa-map"></i> الخريطة</button><button class="side-item" data-page="admin-support"><i class="fas fa-headset"></i> الدعم والمحادثات</button>
           <button class="side-item" id="admin-logout"><i class="fas fa-sign-out-alt"></i> خروج</button>
         </nav>
       </aside>
@@ -617,6 +632,14 @@
               <small>البيانات هنا مشتركة بين جميع أجهزة التطبيق المتصلة بنفس مشروع Firebase.</small>
             </div>
             <div id="admin-database-table" class="table-responsive"></div>
+          </section>
+
+          <section id="admin-support" class="page">
+            <div class="page-header"><h2><i class="fas fa-headset"></i> الدعم والمحادثات</h2><label class="admin-call-toggle"><input type="checkbox" id="admin-call-open"><span></span> استقبال المكالمات</label></div>
+            <div class="support-layout">
+              <aside id="support-threads" class="support-threads"></aside>
+              <section class="support-chat-panel"><div id="admin-chat-header" class="chat-panel-header">اختر محادثة</div><div id="admin-chat-messages" class="chat-messages"></div><div class="chat-compose"><input id="admin-chat-input" placeholder="اكتب ردك..." autocomplete="off"><button class="btn btn-primary" id="admin-chat-send"><i class="fas fa-paper-plane"></i></button></div></section>
+            </div>
           </section>
 
           <section id="admin-map" class="page">
