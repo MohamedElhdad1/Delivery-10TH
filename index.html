@@ -14,7 +14,10 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=6">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
   <!-- شاشة التحميل -->
@@ -704,26 +707,39 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
-    <script src="data.js?v=6"></script>
-  <script src="app.js?v=6"></script>
-  <script src="enhance.js?v=6"></script>
+    <script src="data.js?v=8"></script>
+  <script src="app.js?v=8"></script>
+  <script src="enhance.js?v=8"></script>
   <script>
-    // بعد الرفع على GitHub: الشبكة أولاً → التعديل يبان على كل الأجهزة فورًا
-    if ('serviceWorker' in navigator) {
+    // تحديث تلقائي: نفس مسار sw.js عشان يستبدل القديم، والـ SW بيعمل reload لوحده
+    (function () {
+      if (!('serviceWorker' in navigator)) return;
+
+      // لو الـ SW بعت أمر إعادة تحميل
+      navigator.serviceWorker.addEventListener('message', function (e) {
+        if (e.data && e.data.type === 'FORCE_RELOAD') window.location.reload();
+      });
+
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=6').then(function (reg) {
-          reg.update();
-          if (reg.waiting) reg.waiting.postMessage('SKIP_WAITING');
+        // سجّل بنفس الاسم القديم ./sw.js (من غير ?v=) عشان المتصفح يكتشف التحديث
+        navigator.serviceWorker.register('./sw.js').then(function (reg) {
+          // افحص تحديث فور فتح الصفحة
+          try { reg.update(); } catch (err) {}
+          if (reg.waiting) {
+            try { reg.waiting.postMessage('SKIP_WAITING'); } catch (err) {}
+          }
           reg.addEventListener('updatefound', function () {
             var nw = reg.installing;
             if (!nw) return;
             nw.addEventListener('statechange', function () {
               if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-                window.location.reload();
+                try { nw.postMessage('SKIP_WAITING'); } catch (err) {}
+                // الصفحة هتتحدّث من activate → navigate أو controllerchange
               }
             });
           });
         }).catch(function () {});
+
         var refreshing = false;
         navigator.serviceWorker.addEventListener('controllerchange', function () {
           if (refreshing) return;
@@ -731,7 +747,7 @@
           window.location.reload();
         });
       });
-    }
+    })();
   </script>
 </body>
 </html>
