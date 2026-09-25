@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0f766e">
   <meta name="description" content="منصة توصيل العاشر من رمضان - خدمة توصيل سريعة وآمنة داخل المدينة">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>توصيل العاشر | منصة التوصيل الذكية</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -480,6 +483,7 @@
           <button class="side-item" data-page="admin-clients"><i class="fas fa-users"></i> العملاء</button>
           <button class="side-item" data-page="admin-couriers"><i class="fas fa-motorcycle"></i> المندوبين</button>
           <button class="side-item" data-page="admin-zones"><i class="fas fa-map-marked-alt"></i> المناطق</button>
+          <button class="side-item" data-page="admin-database"><i class="fas fa-database"></i> قاعدة البيانات</button>
           <button class="side-item" data-page="admin-map"><i class="fas fa-map"></i> الخريطة</button>
           <button class="side-item" id="admin-logout"><i class="fas fa-sign-out-alt"></i> خروج</button>
         </nav>
@@ -588,6 +592,33 @@
             <div id="admin-zones-table" class="table-responsive"></div>
           </section>
 
+          <section id="admin-database" class="page">
+            <div class="page-header">
+              <div>
+                <h2>قاعدة البيانات المركزية</h2>
+                <p class="muted">إدارة بيانات Firebase Firestore من داخل لوحة المدير مباشرة.</p>
+              </div>
+              <button class="btn btn-primary" onclick="window.adminDbAdd()"><i class="fas fa-plus"></i> إضافة سجل</button>
+            </div>
+            <div class="toolbar">
+              <select id="admin-db-collection">
+                <option value="users">المستخدمون</option>
+                <option value="orders">الطلبات</option>
+                <option value="zones">المناطق</option>
+                <option value="settings">الإعدادات</option>
+                <option value="notifications">الإشعارات</option>
+                <option value="audit_logs">سجل العمليات</option>
+              </select>
+              <input type="search" id="admin-db-search" placeholder="بحث داخل السجلات...">
+              <button class="btn btn-outline" onclick="window.adminDbRefresh()"><i class="fas fa-sync"></i> تحديث</button>
+            </div>
+            <div class="stat-card" style="margin-bottom:1rem;padding:1rem">
+              <div><b id="admin-db-count">0</b> سجل</div>
+              <small>البيانات هنا مشتركة بين جميع أجهزة التطبيق المتصلة بنفس مشروع Firebase.</small>
+            </div>
+            <div id="admin-database-table" class="table-responsive"></div>
+          </section>
+
           <section id="admin-map" class="page">
             <div id="admin-map-container" class="map-full admin-map"></div>
             <div class="map-legend">
@@ -627,9 +658,9 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
-  <script src="firebase-config.js"></script>
-  <script src="data.js"></script>
+    <script src="data.js"></script>
   <script src="app.js"></script>
+  <script src="enhance.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js').catch(function(){});

@@ -8,7 +8,7 @@ function toast(msg,type='success'){const e=$('toast');e.textContent=msg;e.classN
 function modal(title,body,footer=''){ $('modal-title').textContent=title;$('modal-body').innerHTML=body;$('modal-footer').innerHTML=footer;$('modal').classList.remove('hidden'); }
 function closeModal(){$('modal').classList.add('hidden')}
 function showScreen(role){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));$(role+'-screen')?.classList.add('active');}
-function go(page){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$(page)?.classList.add('active');document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===page));const t=$(page+'-title');if(t)$('admin-page-title').textContent=t.textContent||''; if(page==='admin-map')setTimeout(initAdminMap,100); if(page==='client-create'){setTimeout(initOrderMaps,100);populateZoneSelect();} if(page==='client-track')setTimeout(renderTrack,100); if(page==='client-profile')renderClientProfile(); if(page==='client-notifications')renderNotifications(); if(page==='courier-profile')renderCourierProfile(); if(page==='admin-zones')renderAdminZones();}
+function go(page){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$(page)?.classList.add('active');document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===page));const t=$(page+'-title');if(t)$('admin-page-title').textContent=t.textContent||''; if(page==='admin-map')setTimeout(initAdminMap,100); if(page==='admin-database')setTimeout(renderAdminDatabase,50); if(page==='client-create'){setTimeout(initOrderMaps,100);populateZoneSelect();} if(page==='client-track')setTimeout(renderTrack,100); if(page==='client-profile')renderClientProfile(); if(page==='client-notifications')renderNotifications(); if(page==='courier-profile')renderCourierProfile(); if(page==='admin-zones')renderAdminZones();}
 async function populateZoneSelect(){const zones=await DB.all('zones');const sel=$('order-zone');if(sel&&!sel.dataset.filled){sel.innerHTML=zones.map(z=>`<option value="${z.id}">${esc(z.name)}</option>`).join('');sel.dataset.filled='1'}}
 async function refresh(){if(!currentUser)return; if(currentUser.role==='admin')await renderAdmin(); if(currentUser.role==='client')await renderClient(); if(currentUser.role==='courier')await renderCourier();}
 async function restoreSession(){
@@ -25,13 +25,13 @@ async function restoreSession(){
 }
 async function init(){
  try{
-  const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('التطبيق ماقدرش يتصل بقاعدة البيانات خلال '+(ms/1000)+' ثواني. تأكد إن فيه إنترنت وإن بيانات firebase-config.js صحيحة (مش لسه بالقيم الافتراضية) وإن الرابط مفتوح من سيرفر (مش بفتح الملف مباشرة من جهازك).')),ms))]);
+  const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('التطبيق ماقدرش يتصل بقاعدة البيانات خلال '+(ms/1000)+' ثواني. تأكد إن فيه إنترنت وإن إعدادات Firebase داخل data.js صحيحة وإن الرابط مفتوح من سيرفر (مش بفتح الملف مباشرة من جهازك).')),ms))]);
   await withTimeout(DB.open(),10000);
   await withTimeout(DB.seed(),10000);
  }
  catch(e){
   const s=$('splash'); if(s)s.style.display='none'; $('app')?.classList.remove('hidden');
-  document.body.innerHTML='<div style="padding:2rem;text-align:center;font-family:sans-serif;direction:rtl"><h2>التطبيق مش متصل بقاعدة البيانات</h2><p>'+esc(e.message)+'</p><p>راجع ملف firebase-config.js وتأكد إنك حاطط بيانات مشروعك فيه.</p></div>';
+  document.body.innerHTML='<div style="padding:2rem;text-align:center;font-family:sans-serif;direction:rtl"><h2>التطبيق مش متصل بقاعدة البيانات</h2><p>'+esc(e.message)+'</p><p>راجع إعدادات Firebase داخل data.js وتأكد من Firestore Rules.</p></div>';
   return;
  }
  $('modal-close')?.addEventListener('click',closeModal); $('modal')?.addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
@@ -43,7 +43,7 @@ async function init(){
  document.querySelectorAll('.auth-tab').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.auth-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.auth-form').forEach(x=>x.classList.remove('active'));$('login-form').classList.toggle('active',b.dataset.tab==='login');$('register-form').classList.toggle('active',b.dataset.tab==='register')}));
  $('login-form').addEventListener('submit',doLogin);$('register-form').addEventListener('submit',doRegister);$('admin-logout').addEventListener('click',logout);
  $('btn-create-order')?.addEventListener('click',()=>go('client-create'));$('btn-calc-order')?.addEventListener('click',calcOrder);$('create-order-form')?.addEventListener('submit',createOrder);$('courier-online-toggle')?.addEventListener('change',toggleCourier);
- $('admin-order-search')?.addEventListener('input',renderAdminOrders);$('admin-order-filter')?.addEventListener('change',renderAdminOrders);$('admin-client-search')?.addEventListener('input',renderAdminClients);$('admin-courier-search')?.addEventListener('input',renderAdminCouriers);$('admin-courier-status')?.addEventListener('change',renderAdminCouriers);
+ $('admin-order-search')?.addEventListener('input',renderAdminOrders);$('admin-order-filter')?.addEventListener('change',renderAdminOrders);$('admin-db-collection')?.addEventListener('change',renderAdminDatabase);$('admin-db-search')?.addEventListener('input',renderAdminDatabase);$('admin-client-search')?.addEventListener('input',renderAdminClients);$('admin-courier-search')?.addEventListener('input',renderAdminCouriers);$('admin-courier-status')?.addEventListener('change',renderAdminCouriers);
  document.querySelectorAll('#client-orders .tab').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('#client-orders .tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderClientOrdersList(b.dataset.filter)}));
  await restoreSession();
  setTimeout(()=>{const s=$('splash');if(s)s.style.display='none';$('app')?.classList.remove('hidden')},400);
@@ -120,8 +120,63 @@ function calcOrder(){const a=$('pickup-address').value,b=$('dropoff-address').va
 async function createOrder(e){e.preventDefault();if($('btn-confirm-order').disabled)return;const zoneSel=$('order-zone');const zoneId=zoneSel?zoneSel.value:'';const zoneName=zoneSel&&zoneSel.selectedOptions[0]?zoneSel.selectedOptions[0].textContent:'';const o={id:DB.uid('ORD'),clientId:currentUser.id,clientName:currentUser.name,status:'pending',pickupAddress:$('pickup-address').value,pickupLat:Number($('pickup-lat').value||30.2989),pickupLng:Number($('pickup-lng').value||31.7414),dropoffAddress:$('dropoff-address').value,dropoffLat:Number($('dropoff-lat').value||30.31),dropoffLng:Number($('dropoff-lng').value||31.75),zoneId,zoneName,receiverName:$('receiver-name').value,receiverPhone:$('receiver-phone').value,packageType:$('package-type').value,packageDesc:$('package-desc').value,weight:Number($('package-weight').value||1),size:$('package-size').value,notes:$('order-notes').value,payment:document.querySelector('input[name=payment]:checked').value,distance:window._orderDistance||5,cost:window._orderCost||60,createdAt:DB.now(),updatedAt:DB.now()};await DB.put('orders',o);await DB.log(currentUser.id,'create_order','إنشاء طلب',{orderId:o.id});const admins=(await DB.all('users')).filter(x=>x.role==='admin'&&x.status==='active');for(const a of admins)await DB.notify(a.id,'طلب جديد','تم إنشاء طلب جديد #'+o.id.slice(-8),'info',{orderId:o.id});toast('تم إنشاء الطلب');e.target.reset();$('order-summary').style.display='none';$('btn-confirm-order').disabled=true;await refresh();go('client-order-details');window.clientOrder(o.id)}
 function initOrderMaps(){if(typeof L==='undefined')return;const center=[30.2989,31.7414];if(!pickupMap){pickupMap=L.map('pickup-map').setView(center,12);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(pickupMap);pickupMap.on('click',e=>{if(pickupMarker)pickupMap.removeLayer(pickupMarker);pickupMarker=L.marker(e.latlng).addTo(pickupMap);$('pickup-lat').value=e.latlng.lat;$('pickup-lng').value=e.latlng.lng})}if(!dropoffMap){dropoffMap=L.map('dropoff-map').setView(center,12);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(dropoffMap);dropoffMap.on('click',e=>{if(dropoffMarker)dropoffMap.removeLayer(dropoffMarker);dropoffMarker=L.marker(e.latlng).addTo(dropoffMap);$('dropoff-lat').value=e.latlng.lat;$('dropoff-lng').value=e.latlng.lng})}setTimeout(()=>{pickupMap.invalidateSize();dropoffMap.invalidateSize()},200)}
 function renderTrack(){if(typeof L==='undefined'||!currentOrderId)return;DB.get('orders',currentOrderId).then(o=>{if(!o)return;if(!trackMap){trackMap=L.map('track-map').setView([o.pickupLat,o.pickupLng],12);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMap)}L.marker([o.pickupLat,o.pickupLng]).addTo(trackMap).bindPopup('الاستلام');L.marker([o.dropoffLat,o.dropoffLng]).addTo(trackMap).bindPopup('التسليم');$('track-info').innerHTML=`<div class="order-card"><b>الحالة: ${statusAr[o.status]}</b><p>المندوب: ${esc(o.courierName||'لم يتم التعيين')}</p></div>`;setTimeout(()=>trackMap.invalidateSize(),200)})}
+const ADMIN_DB_COLLECTIONS={users:'المستخدمون',orders:'الطلبات',zones:'المناطق',settings:'الإعدادات',notifications:'الإشعارات',audit_logs:'سجل العمليات'};
+function adminDbValue(v){
+  if(v===null||v===undefined)return '';
+  if(typeof v==='object')return JSON.stringify(v);
+  return String(v);
+}
+function adminDbPreview(v){
+  const s=adminDbValue(v);
+  return esc(s.length>110?s.slice(0,110)+'…':s);
+}
+async function renderAdminDatabase(){
+  if(!currentUser||currentUser.role!=='admin')return;
+  const col=$('admin-db-collection')?.value||'users';
+  const q=($('admin-db-search')?.value||'').trim().toLowerCase();
+  const rows=await DB.all(col);
+  const filtered=rows.filter(r=>!q||JSON.stringify(r).toLowerCase().includes(q));
+  if($('admin-db-count'))$('admin-db-count').textContent=filtered.length+' / '+rows.length;
+  const keys=[]; filtered.forEach(r=>Object.keys(r||{}).forEach(k=>{if(!keys.includes(k))keys.push(k)}));
+  const visibleKeys=keys.slice(0,5);
+  $('admin-database-table').innerHTML=filtered.length?`<table><thead><tr><th>#</th>${visibleKeys.map(k=>`<th>${esc(k)}</th>`).join('')}<th>إجراءات</th></tr></thead><tbody>${filtered.map((r,i)=>{const id=r.id??r.key??('row-'+i);return `<tr><td>${i+1}</td>${visibleKeys.map(k=>`<td title="${esc(adminDbValue(r[k]))}">${adminDbPreview(r[k])||'-'}</td>`).join('')}<td><button class="btn btn-sm btn-outline" onclick="window.adminDbEdit('${esc(String(id))}')">تعديل</button> <button class="btn btn-sm btn-danger" onclick="window.adminDbDelete('${esc(String(id))}')">حذف</button></td></tr>`}).join('')}</tbody></table>`:empty('لا توجد سجلات');
+}
+function adminDbFindId(row,col){return row&&(row.id??row.key);}
+window.adminDbRefresh=()=>renderAdminDatabase();
+window.adminDbAdd=()=>{
+  if(!currentUser||currentUser.role!=='admin')return;
+  const col=$('admin-db-collection').value;
+  const id=col==='settings'?'':DB.uid(col.slice(0,3));
+  const sample={id:id||undefined};
+  if(col==='settings'){delete sample.id;sample.key='app';sample.value={};}
+  modal('إضافة سجل — '+(ADMIN_DB_COLLECTIONS[col]||col),`<div class="form-group"><label>JSON</label><textarea id="admin-db-json" rows="16" style="direction:ltr;text-align:left;font-family:monospace">${esc(JSON.stringify(sample,null,2))}</textarea><small>أدخل كائن JSON صالح. في الإعدادات استخدم الحقل key بدل id.</small></div>`,`<button class="btn btn-outline" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="window.adminDbSave(null)">حفظ في قاعدة البيانات</button>`);
+};
+window.adminDbEdit=async id=>{
+  if(!currentUser||currentUser.role!=='admin')return;
+  const col=$('admin-db-collection').value; const r=await DB.get(col,id); if(!r)return toast('السجل غير موجود','error');
+  modal('تعديل سجل — '+(ADMIN_DB_COLLECTIONS[col]||col),`<div class="form-group"><label>JSON</label><textarea id="admin-db-json" rows="18" style="direction:ltr;text-align:left;font-family:monospace">${esc(JSON.stringify(r,null,2))}</textarea></div>`,`<button class="btn btn-outline" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="window.adminDbSave('${esc(String(id))}')">حفظ التعديل</button>`);
+};
+window.adminDbSave=async oldId=>{
+  try{
+    if(!currentUser||currentUser.role!=='admin')throw new Error('غير مصرح');
+    const col=$('admin-db-collection').value; const obj=JSON.parse($('admin-db-json').value);
+    const kf=col==='settings'?'key':'id';
+    if(!obj[kf])obj[kf]=oldId||DB.uid(col.slice(0,3));
+    if(oldId&&String(obj[kf])!==String(oldId))throw new Error('لا تغيّر المعرف أثناء التعديل');
+    await DB.put(col,obj); await DB.log(currentUser.id,'admin_db_save','حفظ سجل في '+col,{collection:col,id:obj[kf]}); closeModal(); toast('تم الحفظ في قاعدة البيانات المركزية'); await renderAdminDatabase();
+  }catch(e){toast(e.message||'JSON غير صالح','error')}
+};
+window.adminDbDelete=async id=>{
+  try{
+    if(!currentUser||currentUser.role!=='admin')throw new Error('غير مصرح');
+    const col=$('admin-db-collection').value;
+    if(col==='users'){const u=await DB.get('users',id);if(u?.role==='admin'&&(await DB.all('users')).filter(x=>x.role==='admin'&&x.status==='active').length<=1)throw new Error('لا يمكن حذف آخر مدير فعال');}
+    if(!confirm('هل تريد حذف هذا السجل نهائياً من قاعدة البيانات؟'))return;
+    await DB.del(col,id);await DB.log(currentUser.id,'admin_db_delete','حذف سجل من '+col,{collection:col,id});toast('تم حذف السجل');await renderAdminDatabase();
+  }catch(e){toast(e.message||'تعذر الحذف','error')}
+};
 function initAdminMap(){if(typeof L==='undefined'||adminMap)return;adminMap=L.map('admin-map-container').setView([30.2989,31.7414],11);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(adminMap);DB.all('users').then(users=>users.filter(x=>x.role==='courier'&&x.online).forEach(u=>{if(u.lat&&u.lng)L.marker([u.lat,u.lng]).addTo(adminMap).bindPopup(u.name)}));}
 // إضافة إدارة المديرين للقائمة حتى لو لم تكن موجودة في HTML الأصلي
 function injectAdminManagers(){const nav=document.querySelector('#admin-sidebar .sidebar-nav');if(nav&&!$('nav-admin-managers')){const b=document.createElement('button');b.id='nav-admin-managers';b.className='side-item';b.dataset.page='admin-managers';b.innerHTML='<i class="fas fa-user-shield"></i> إدارة المديرين';b.onclick=()=>go('admin-managers');nav.insertBefore(b,nav.querySelector('#admin-logout'));const s=document.createElement('section');s.id='admin-managers';s.className='page';s.innerHTML='<div class="page-header"><h2>إدارة المديرين</h2><button class="btn btn-primary" onclick="adminManagerUI()"><i class="fas fa-user-plus"></i> إنشاء حساب مدير</button></div><div id="admin-managers-table" class="table-responsive"></div>';$('admin-screen').querySelector('.admin-content').appendChild(s)}}
-window.addEventListener('DOMContentLoaded',async()=>{injectAdminManagers();await init()});window.go=go;window.closeModal=closeModal;window.adminManagerUI=adminManagerUI;window.logout=logout;
+window.addEventListener('DOMContentLoaded',async()=>{injectAdminManagers();await init()});window.go=go;window.closeModal=closeModal;window.adminManagerUI=adminManagerUI;window.adminDbRefresh=renderAdminDatabase;window.logout=logout;
 })();

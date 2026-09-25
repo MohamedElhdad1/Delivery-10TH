@@ -6,6 +6,17 @@
   const KEY_FIELD = { settings: 'key' };
   const keyField = (store) => KEY_FIELD[store] || 'id';
 
+  // Firebase configuration is intentionally embedded here so the project no longer depends on a separate firebase-config.js file.
+  window.FIREBASE_CONFIG = {
+    apiKey: "AIzaSyCoULVGF_0OHNKFMOhRsrCF3qrAq3sH9_Q",
+    authDomain: "delivery-10th-2deef.firebaseapp.com",
+    projectId: "delivery-10th-2deef",
+    storageBucket: "delivery-10th-2deef.firebasestorage.app",
+    messagingSenderId: "792094138758",
+    appId: "1:792094138758:web:5a12c11380e6a41aa30c07",
+    measurementId: "G-ZCVSCHFP6J"
+  };
+
   let db = null, fbReadyPromise = null;
 
   function ensureFirebase() {
@@ -16,7 +27,7 @@
         return;
       }
       if (!window.FIREBASE_CONFIG || !window.FIREBASE_CONFIG.projectId || /ضع-قيمتك-هنا/.test(window.FIREBASE_CONFIG.projectId) || !window.FIREBASE_CONFIG.apiKey || /ضع-قيمتك-هنا/.test(window.FIREBASE_CONFIG.apiKey)) {
-        reject(new Error('إعدادات Firebase غير مكتملة. افتح ملف firebase-config.js وحط بيانات مشروعك فيه (شوف التعليمات في أول الملف).'));
+        reject(new Error('إعدادات Firebase غير مكتملة. ضع إعدادات مشروع Firebase داخل data.js إذا احتجت تغيير المشروع.'));
         return;
       }
       try {
