@@ -56,11 +56,6 @@ body {
   text-align: center;
   color: white;
 }
-.logo-anim {
-  font-size: 4rem;
-  margin-bottom: 1rem;
-  animation: bounce 1.5s infinite;
-}
 .splash h1 {
   font-size: 2.2rem;
   font-weight: 800;
@@ -68,21 +63,101 @@ body {
 }
 .splash p {
   opacity: 0.9;
-  margin-bottom: 2rem;
+  margin-bottom: 1.75rem;
 }
-.loader {
-  width: 48px;
-  height: 48px;
-  border: 4px solid rgba(255,255,255,0.3);
-  border-top-color: white;
+
+/* مشهد العربية/الموتوسيكل المتحركة في شاشة التحميل */
+.vehicle-scene {
+  width: 220px;
+  max-width: 68vw;
+  margin: 0 auto 1.25rem;
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.28));
+}
+.vehicle-svg { width: 100%; height: auto; display: block; overflow: visible; }
+
+.road-line {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 10 12;
+  animation: roadFlow 0.6s linear infinite;
+}
+@keyframes roadFlow { to { stroke-dashoffset: -22; } }
+
+.moto-group {
+  transform-origin: 150px 120px;
+  animation: motoBounce 0.5s ease-in-out infinite;
+}
+@keyframes motoBounce {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-3px) rotate(-0.6deg); }
+}
+
+.moto-footboard, .moto-seat { fill: #ffffff; }
+.moto-box { fill: #fde68a; }
+.moto-box-strap { stroke: rgba(15, 118, 110, 0.45); stroke-width: 2; }
+.moto-frame, .moto-fork, .moto-handlebar {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+.moto-grip { fill: #ffffff; }
+.moto-headlight {
+  fill: #fde68a;
+  transform-origin: 66px 76px;
+  animation: headlightPulse 1s ease-in-out infinite;
+}
+@keyframes headlightPulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.3); }
+}
+
+.wheel-tire { fill: none; stroke: #ffffff; stroke-width: 4; }
+.wheel-hub { fill: #ffffff; }
+.spoke { stroke: rgba(255, 255, 255, 0.6); stroke-width: 2; }
+.wheel-front { transform-origin: 78px 118px; animation: wheelSpin 0.5s linear infinite; }
+.wheel-rear { transform-origin: 210px 118px; animation: wheelSpin 0.5s linear infinite; }
+@keyframes wheelSpin { to { transform: rotate(360deg); } }
+
+.puff { fill: rgba(255, 255, 255, 0.55); opacity: 0; transform-origin: 230px 110px; }
+.puff-1 { animation: puff 1.2s ease-out infinite; }
+.puff-2 { animation: puff 1.2s ease-out infinite; animation-delay: 0.4s; }
+.puff-3 { animation: puff 1.2s ease-out infinite; animation-delay: 0.8s; }
+@keyframes puff {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.4); }
+  15% { opacity: 0.6; }
+  100% { opacity: 0; transform: translate(16px, -16px) scale(1.7); }
+}
+
+.speed-line { stroke: rgba(255, 255, 255, 0.55); stroke-width: 3; stroke-linecap: round; opacity: 0; }
+.sl-1 { animation: speedFlicker 0.5s ease-in-out infinite; }
+.sl-2 { animation: speedFlicker 0.5s ease-in-out infinite 0.15s; }
+.sl-3 { animation: speedFlicker 0.5s ease-in-out infinite 0.3s; }
+@keyframes speedFlicker {
+  0%, 100% { opacity: 0; transform: translateX(5px); }
+  50% { opacity: 0.85; transform: translateX(-5px); }
+}
+
+.loader-dots {
+  display: flex;
+  gap: 9px;
+  justify-content: center;
+}
+.loader-dots span {
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin: 0 auto;
+  background: #ffffff;
+  opacity: 0.35;
+  animation: dotPulse 1s ease-in-out infinite;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12px); }
+.loader-dots span:nth-child(2) { animation-delay: 0.15s; }
+.loader-dots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes dotPulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.7); }
+  50% { opacity: 1; transform: scale(1); }
 }
 
 .hidden { display: none !important; }

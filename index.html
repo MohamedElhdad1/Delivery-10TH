@@ -17,12 +17,51 @@
   <!-- شاشة التحميل -->
   <div id="splash" class="splash">
     <div class="splash-content">
-      <div class="logo-anim">
-        <i class="fas fa-shipping-fast"></i>
+      <div class="vehicle-scene">
+        <svg class="vehicle-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <g class="speed-lines">
+            <line class="speed-line sl-1" x1="0" y1="68" x2="20" y2="68"></line>
+            <line class="speed-line sl-2" x1="0" y1="84" x2="22" y2="84"></line>
+            <line class="speed-line sl-3" x1="0" y1="100" x2="18" y2="100"></line>
+          </g>
+          <g class="puffs">
+            <circle class="puff puff-1" cx="230" cy="110" r="4"></circle>
+            <circle class="puff puff-2" cx="230" cy="110" r="4"></circle>
+            <circle class="puff puff-3" cx="230" cy="110" r="4"></circle>
+          </g>
+          <line class="road-line" x1="8" y1="140" x2="292" y2="140"></line>
+          <g class="moto-group">
+            <rect class="moto-box" x="150" y="48" width="42" height="34" rx="6"></rect>
+            <line class="moto-box-strap" x1="171" y1="48" x2="171" y2="82"></line>
+            <line class="moto-frame" x1="112" y1="80" x2="205" y2="106"></line>
+            <rect class="moto-seat" x="110" y="76" width="46" height="9" rx="4"></rect>
+            <rect class="moto-footboard" x="95" y="104" width="90" height="7" rx="3"></rect>
+            <line class="moto-fork" x1="78" y1="106" x2="60" y2="70"></line>
+            <line class="moto-handlebar" x1="48" y1="66" x2="72" y2="72"></line>
+            <circle class="moto-grip" cx="48" cy="66" r="3.5"></circle>
+            <circle class="moto-headlight" cx="66" cy="76" r="4"></circle>
+            <g class="wheel wheel-front">
+              <circle class="wheel-tire" cx="78" cy="118" r="18"></circle>
+              <line class="spoke" x1="78" y1="103" x2="78" y2="133"></line>
+              <line class="spoke" x1="63" y1="118" x2="93" y2="118"></line>
+              <line class="spoke" x1="68" y1="108" x2="88" y2="128"></line>
+              <line class="spoke" x1="88" y1="108" x2="68" y2="128"></line>
+              <circle class="wheel-hub" cx="78" cy="118" r="5"></circle>
+            </g>
+            <g class="wheel wheel-rear">
+              <circle class="wheel-tire" cx="210" cy="118" r="18"></circle>
+              <line class="spoke" x1="210" y1="103" x2="210" y2="133"></line>
+              <line class="spoke" x1="195" y1="118" x2="225" y2="118"></line>
+              <line class="spoke" x1="200" y1="108" x2="220" y2="128"></line>
+              <line class="spoke" x1="220" y1="108" x2="200" y2="128"></line>
+              <circle class="wheel-hub" cx="210" cy="118" r="5"></circle>
+            </g>
+          </g>
+        </svg>
       </div>
       <h1>توصيل العاشر</h1>
       <p>منصة التوصيل الذكية لمدينة العاشر من رمضان</p>
-      <div class="loader"></div>
+      <div class="loader-dots"><span></span><span></span><span></span></div>
     </div>
   </div>
 
@@ -586,6 +625,9 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
   <script src="data.js"></script>
   <script src="app.js"></script>
   <script>

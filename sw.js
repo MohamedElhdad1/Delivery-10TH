@@ -1,11 +1,15 @@
 // Service Worker بسيط للـ PWA
-const CACHE = 'delivery-v2';
+// لازم تغيّر اسم الـ CACHE ده (رقم النسخة) في كل مرة بترفع تعديلات جديدة،
+// وإلا الأجهزة اللي فاتحة التطبيق قبل كده هتفضل شايفة النسخة القديمة المخزنة
+// عندها حتى لو النسخة الجديدة اتحدثت على السيرفر.
+const CACHE = 'delivery-v4';
 const ASSETS = [
   './',
   './index.html',
   './style.css',
   './data.js',
   './app.js',
+  './firebase-config.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
