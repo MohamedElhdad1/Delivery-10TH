@@ -8,7 +8,7 @@ function toast(msg,type='success'){const e=$('toast');e.textContent=msg;e.classN
 function modal(title,body,footer=''){ $('modal-title').textContent=title;$('modal-body').innerHTML=body;$('modal-footer').innerHTML=footer;$('modal').classList.remove('hidden'); }
 function closeModal(){$('modal').classList.add('hidden')}
 function showScreen(role){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));$(role+'-screen')?.classList.add('active');}
-function go(page){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$(page)?.classList.add('active');document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===page));const t=$(page+'-title');if(t)$('admin-page-title').textContent=t.textContent||''; if(page==='admin-map')setTimeout(initAdminMap,100); if(page==='admin-database')setTimeout(renderAdminDatabase,50); if(page==='client-create'){setTimeout(initOrderMaps,100);populateZoneSelect();} if(page==='client-track')setTimeout(renderTrack,100); if(page==='client-profile')renderClientProfile(); if(page==='client-notifications')renderNotifications(); if(page==='courier-profile')renderCourierProfile(); if(page==='admin-zones')renderAdminZones(); if(page==='client-ranking')renderRanking(); if(page==='admin-ranking')renderAdminRanking();}
+function go(page){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$(page)?.classList.add('active');document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===page));const t=$(page+'-title');if(t)$('admin-page-title').textContent=t.textContent||''; if(page==='admin-map')setTimeout(initAdminMap,100); if(page==='admin-database')setTimeout(renderAdminDatabase,50); if(page==='client-create'){setTimeout(initOrderMaps,100);populateZoneSelect();} if(page==='client-track')setTimeout(renderTrack,100); if(page==='client-profile')renderClientProfile(); if(page==='client-notifications')renderNotifications(); if(page==='courier-profile')renderCourierProfile(); if(page==='admin-zones')renderAdminZones(); if(page==='client-ranking')renderRanking(); if(page==='admin-ranking')renderAdminRanking(); if(page==='client-chat'||page==='courier-chat')setTimeout(async()=>{if(currentUser){await ensureWelcomeBot(currentUser.id);await renderSupportChat(currentUser.id);}},30); if(page==='admin-support')setTimeout(renderAdminSupport,30);}
 async function populateZoneSelect(){const zones=await DB.all('zones');const sel=$('order-zone');if(sel&&!sel.dataset.filled){sel.innerHTML=zones.map(z=>`<option value="${z.id}">${esc(z.name)}</option>`).join('');sel.dataset.filled='1'}}
 async function refresh(){if(!currentUser)return; if(currentUser.role==='admin')await renderAdmin(); if(currentUser.role==='client')await renderClient(); if(currentUser.role==='courier')await renderCourier();}
 async function restoreSession(){
@@ -42,7 +42,19 @@ async function init(){
  $('client-menu-btn')?.addEventListener('click',()=>go('client-profile'));
  document.addEventListener('click',ev=>{const sb=document.querySelector('.sidebar');if(sb&&sb.classList.contains('open')&&!sb.contains(ev.target)&&ev.target.id!=='sidebar-toggle'&&!ev.target.closest('#sidebar-toggle'))sb.classList.remove('open')});
  document.querySelectorAll('.auth-tab').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.auth-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.auth-form').forEach(x=>x.classList.remove('active'));$('login-form').classList.toggle('active',b.dataset.tab==='login');$('register-form').classList.toggle('active',b.dataset.tab==='register')}));
- $('login-form').addEventListener('submit',doLogin);$('register-form').addEventListener('submit',doRegister);$('admin-logout').addEventListener('click',logout);
+ $('login-form').addEventListener('submit',doLogin);$('register-form').addEventListener('submit',doRegister);
+ // قائمة حساب الأدمن (صورة + إعدادات + خروج)
+ (function setupAdminUserMenu(){
+  const btn=$('admin-user-btn'),dd=$('admin-user-dropdown'),menu=$('admin-user-menu');
+  if(!btn||!dd)return;
+  const close=()=>{dd.hidden=true;btn.setAttribute('aria-expanded','false')};
+  const open=()=>{dd.hidden=false;btn.setAttribute('aria-expanded','true')};
+  btn.addEventListener('click',e=>{e.stopPropagation();dd.hidden?open():close()});
+  $('admin-profile-btn')?.addEventListener('click',()=>{close();window.editProfile()});
+  $('admin-logout')?.addEventListener('click',()=>{close();logout()});
+  document.addEventListener('click',e=>{if(menu&&!menu.contains(e.target))close()});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+ })();
  $('btn-create-order')?.addEventListener('click',()=>go('client-create'));$('btn-calc-order')?.addEventListener('click',calcOrder);$('create-order-form')?.addEventListener('submit',createOrder);$('courier-online-toggle')?.addEventListener('change',toggleCourier);
  $('admin-order-search')?.addEventListener('input',renderAdminOrders);$('admin-order-filter')?.addEventListener('change',renderAdminOrders);$('admin-db-collection')?.addEventListener('change',renderAdminDatabase);$('admin-db-search')?.addEventListener('input',renderAdminDatabase);$('admin-client-search')?.addEventListener('input',renderAdminClients);$('admin-courier-search')?.addEventListener('input',renderAdminCouriers);$('admin-courier-status')?.addEventListener('change',renderAdminCouriers);
  document.querySelectorAll('#client-orders .tab').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('#client-orders .tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderClientOrdersList(b.dataset.filter)}));
@@ -54,6 +66,12 @@ async function doRegister(e){e.preventDefault();try{const role=$('reg-role').val
 function logout(){try{DB.touchPresence(currentUser.id,false);if(currentUser?.role==='admin')DB.put('support_presence',{id:currentUser.id,role:'admin',online:false,callOpen:false,updatedAt:DB.now()});DB.stopAllListeners()}catch(e){}stopRealtime();currentUser=null;localStorage.removeItem('delivery_session');showScreen('auth');toast('تم تسجيل الخروج')}
 async function renderAdmin(){
  const users=await DB.all('users'),orders=await DB.all('orders');
+ const me=users.find(x=>x.id===currentUser?.id)||currentUser;
+ if(me){
+  const nameEl=$('admin-user-name'),avEl=$('admin-user-avatar');
+  if(nameEl)nameEl.textContent=me.name||'مدير النظام';
+  if(avEl)avEl.src=me.avatar||('https://ui-avatars.com/api/?name='+encodeURIComponent(me.name||'Admin')+'&background=7c3aed&color=fff');
+ }
  $('admin-total-clients').textContent=users.filter(x=>x.role==='client').length;$('admin-total-couriers').textContent=users.filter(x=>x.role==='courier').length;
  $('admin-active-orders').textContent=orders.filter(x=>['pending','searching','accepted'].includes(x.status)).length;$('admin-completed-orders').textContent=orders.filter(x=>x.status==='completed').length;$('admin-cancelled-orders').textContent=orders.filter(x=>x.status==='cancelled').length;$('admin-total-revenue').textContent=money(orders.filter(x=>x.status==='completed').reduce((a,x)=>a+Number(x.cost||0),0));
  await renderAdminOrders();await renderAdminClients();await renderAdminCouriers();
@@ -129,8 +147,8 @@ window.openDeliverModal=id=>{window._proofData=null;modal('تسليم الطلب
 window.confirmDeliver=async id=>{try{const o=await DB.get('orders',id);o.status='completed';o.deliveredAt=DB.now();o.updatedAt=DB.now();if(window._proofData)o.proofPhoto=window._proofData;await DB.put('orders',o);const c=await DB.get('users',currentUser.id);c.earnings=(c.earnings||0)+Number(o.cost||0);c.completedOrders=(c.completedOrders||0)+1;c.updatedAt=DB.now();await DB.put('users',c);currentUser=c;await DB.notify(o.clientId,'تم التسليم','تم تسليم طلبك بنجاح، يمكنك تقييم المندوب','success',{orderId:id});await DB.log(currentUser.id,'complete_order','تسليم طلب',{orderId:id});window._proofData=null;closeModal();toast('تم تسليم الطلب بنجاح');go('courier-home');await refresh()}catch(e){toast(e.message,'error')}};
 async function renderClientProfile(){const u=await DB.get('users',currentUser.id);$('client-profile-content').innerHTML=`<img src="${u.avatar||'https://ui-avatars.com/api/?name='+encodeURIComponent(u.name)+'&background=0f766e&color=fff'}" class="avatar"><h3>${esc(u.name)}</h3><p><i class="fas fa-phone"></i> ${esc(u.phone)}</p><p><i class="fas fa-location-dot"></i> ${esc(u.address||'لم يتم إضافة عنوان')}</p><p>${esc(u.bio||'لا توجد نبذة تعريفية')}</p><button class="btn btn-outline btn-block" onclick="window.editProfile()"><i class="fas fa-user-edit"></i> تعديل الملف الشخصي</button><button class="btn btn-danger btn-block" onclick="logout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>`}
 async function renderCourierProfile(){const u=await DB.get('users',currentUser.id);await loadZones();$('courier-profile-content').innerHTML=`<img src="${u.avatar||'https://ui-avatars.com/api/?name='+encodeURIComponent(u.name)+'&background=0369a1&color=fff'}" class="avatar"><h3>${esc(u.name)}</h3><p><i class="fas fa-phone"></i> ${esc(u.phone)}</p><p><i class="fas fa-map-marker-alt"></i> ${esc(zoneName(u.zoneId))}</p><p><i class="fas fa-location-dot"></i> ${esc(u.address||'لم يتم إضافة عنوان')}</p><p><i class="fas fa-motorcycle"></i> ${esc(u.specialty||'لم يتم تحديد التخصص')}</p><p>${esc(u.bio||'لا توجد نبذة تعريفية')}</p><p><i class="fas fa-star text-warning"></i> ${u.rating||5} تقييم - ${u.completedOrders||0} طلب مكتمل</p><button class="btn btn-outline btn-block" onclick="window.editProfile()"><i class="fas fa-user-edit"></i> تعديل الملف الشخصي</button><button class="btn btn-danger btn-block" onclick="logout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>`}
-window.editProfile=async()=>{const u=await DB.get('users',currentUser.id);const isCourier=u.role==='courier';window._epAvatar=u.avatar||'';modal('تعديل الملف الشخصي',`<div class="form-group"><label>الصورة الشخصية</label><input type="file" id="ep-avatar" accept="image/*"><div id="ep-avatar-preview">${u.avatar?`<img src="${u.avatar}" class="avatar-sm-preview">`:''}</div></div><div class="form-group"><label>الاسم</label><input id="ep-name" value="${esc(u.name)}"></div><div class="form-group"><label>نبذة تعريفية</label><textarea id="ep-bio" rows="2">${esc(u.bio||'')}</textarea></div><div class="form-group"><label>العنوان</label><input id="ep-address" value="${esc(u.address||'')}"></div>${isCourier?`<div class="form-group"><label>التخصص / نوع المركبة</label><input id="ep-specialty" value="${esc(u.specialty||'')}" placeholder="مثال: توصيل موتوسيكل"></div>`:''}`,`<button class="btn btn-outline" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="window.saveProfile()">حفظ</button>`);$('ep-avatar').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{window._epAvatar=r.result;$('ep-avatar-preview').innerHTML=`<img src="${r.result}" class="avatar-sm-preview">`};r.readAsDataURL(f)})};
-window.saveProfile=async()=>{try{const patch={name:$('ep-name').value,bio:$('ep-bio').value,address:$('ep-address').value,avatar:window._epAvatar};const sp=$('ep-specialty');if(sp)patch.specialty=sp.value;const u=await DB.updateUser(currentUser.id,patch,currentUser.id);currentUser=u;closeModal();toast('تم حفظ الملف الشخصي');if(u.role==='client'){$('client-name').textContent=u.name;if(u.avatar)$('client-avatar').src=u.avatar;renderClientProfile()}else{$('courier-name').textContent=u.name;if(u.avatar)$('courier-avatar').src=u.avatar;renderCourierProfile()}}catch(e){toast(e.message,'error')}};
+window.editProfile=async()=>{const u=await DB.get('users',currentUser.id);const isCourier=u.role==='courier';const isAdmin=u.role==='admin';window._epAvatar=u.avatar||'';modal(isAdmin?'إعدادات الحساب':'تعديل الملف الشخصي',`<div class="form-group"><label>الصورة الشخصية</label><input type="file" id="ep-avatar" accept="image/*"><div id="ep-avatar-preview">${u.avatar?`<img src="${u.avatar}" class="avatar-sm-preview">`:''}</div></div><div class="form-group"><label>الاسم</label><input id="ep-name" value="${esc(u.name)}"></div><div class="form-group"><label>نبذة تعريفية</label><textarea id="ep-bio" rows="2">${esc(u.bio||'')}</textarea></div><div class="form-group"><label>العنوان</label><input id="ep-address" value="${esc(u.address||'')}"></div>${isCourier?`<div class="form-group"><label>التخصص / نوع المركبة</label><input id="ep-specialty" value="${esc(u.specialty||'')}" placeholder="مثال: توصيل موتوسيكل"></div>`:''}`,`<button class="btn btn-outline" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="window.saveProfile()">حفظ</button>`);$('ep-avatar').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{window._epAvatar=r.result;$('ep-avatar-preview').innerHTML=`<img src="${r.result}" class="avatar-sm-preview">`};r.readAsDataURL(f)})};
+window.saveProfile=async()=>{try{const patch={name:$('ep-name').value,bio:$('ep-bio').value,address:$('ep-address').value,avatar:window._epAvatar};const sp=$('ep-specialty');if(sp)patch.specialty=sp.value;const u=await DB.updateUser(currentUser.id,patch,currentUser.id);currentUser=u;closeModal();toast('تم حفظ الملف الشخصي');if(u.role==='client'){$('client-name').textContent=u.name;if(u.avatar)$('client-avatar').src=u.avatar;renderClientProfile()}else if(u.role==='courier'){$('courier-name').textContent=u.name;if(u.avatar)$('courier-avatar').src=u.avatar;renderCourierProfile()}else if(u.role==='admin'){const nameEl=$('admin-user-name'),avEl=$('admin-user-avatar');if(nameEl)nameEl.textContent=u.name;if(avEl)avEl.src=u.avatar||('https://ui-avatars.com/api/?name='+encodeURIComponent(u.name||'Admin')+'&background=7c3aed&color=fff')}}catch(e){toast(e.message,'error')}};
 async function toggleCourier(e){const u=await DB.get('users',currentUser.id);u.online=e.target.checked;u.updatedAt=DB.now();await DB.put('users',u);currentUser=u;toast(u.online?'أصبحت متصلاً':'أصبحت غير متصل');renderCourier()}
 window.acceptCourierOrder=async id=>{const o=await DB.get('orders',id);if(o.courierId&&o.courierId!==currentUser.id)return toast('الطلب تم أخذه','error');o.courierId=currentUser.id;o.courierName=currentUser.name;o.status='accepted';o.updatedAt=DB.now();await DB.put('orders',o);await DB.notify(o.clientId,'تم قبول الطلب','المندوب '+currentUser.name+' قبل طلبك','success',{orderId:id});await DB.log(currentUser.id,'accept_order','قبول طلب مندوب',{orderId:id});toast('تم قبول الطلب');renderCourier()};
 function haversineKm(lat1,lng1,lat2,lng2){const R=6371,toRad=d=>d*Math.PI/180;const dLat=toRad(lat2-lat1),dLng=toRad(lng2-lng1);const s=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;return R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s));}
@@ -200,7 +218,7 @@ window.adminDbDelete=async id=>{
 };
 function initAdminMap(){if(typeof L==='undefined'||adminMap)return;adminMap=L.map('admin-map-container').setView([30.2989,31.7414],11);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(adminMap);DB.all('users').then(users=>users.filter(x=>x.role==='courier'&&x.online).forEach(u=>{if(u.lat&&u.lng)L.marker([u.lat,u.lng]).addTo(adminMap).bindPopup(u.name)}));}
 // إضافة إدارة المديرين للقائمة حتى لو لم تكن موجودة في HTML الأصلي
-function injectAdminManagers(){const nav=document.querySelector('#admin-sidebar .sidebar-nav');if(nav&&!$('nav-admin-managers')){const b=document.createElement('button');b.id='nav-admin-managers';b.className='side-item';b.dataset.page='admin-managers';b.innerHTML='<i class="fas fa-user-shield"></i> إدارة المديرين';b.onclick=()=>go('admin-managers');nav.insertBefore(b,nav.querySelector('#admin-logout'));const s=document.createElement('section');s.id='admin-managers';s.className='page';s.innerHTML='<div class="page-header"><h2>إدارة المديرين</h2><button class="btn btn-primary" onclick="adminManagerUI()"><i class="fas fa-user-plus"></i> إنشاء حساب مدير</button></div><div id="admin-managers-table" class="table-responsive"></div>';$('admin-screen').querySelector('.admin-content').appendChild(s)}}
+function injectAdminManagers(){const nav=document.querySelector('#admin-sidebar .sidebar-nav');if(nav&&!$('nav-admin-managers')){const b=document.createElement('button');b.id='nav-admin-managers';b.className='side-item';b.dataset.page='admin-managers';b.innerHTML='<i class="fas fa-user-shield"></i> إدارة المديرين';b.onclick=()=>go('admin-managers');nav.appendChild(b);const s=document.createElement('section');s.id='admin-managers';s.className='page';s.innerHTML='<div class="page-header"><h2>إدارة المديرين</h2><button class="btn btn-primary" onclick="adminManagerUI()"><i class="fas fa-user-plus"></i> إنشاء حساب مدير</button></div><div id="admin-managers-table" class="table-responsive"></div>';$('admin-screen').querySelector('.admin-content').appendChild(s)}}
 
 // ===== REALTIME + SUPPORT CHAT/CALL =====
 let realtimeUnsubs=[], activeSupportThread=null, callState={pc:null,local:null,remote:null,thread:null};
@@ -219,14 +237,115 @@ function updateSupportStatus(){
   const admins=(window.__supportPresence||[]).filter(x=>x.role==='admin'&&x.online); const online=admins.length>0;
   ['client','courier'].forEach(role=>{const st=$(role+'-admin-status'),dot=$(role+'-admin-status-dot'),btn=$(role+'-call-btn');if(st){st.textContent=online?'الإدارة متصلة الآن':'الإدارة غير متصلة حالياً';}if(dot)dot.className='status-dot '+(online?'online':'offline');if(btn)btn.disabled=!online;});
 }
-async function openSupport(role){go(role+'-chat');await renderSupportChat(currentUser.id);}
+const BOT_ID='support_bot';
+const BOT_REPLIES=[
+  {keys:['مرحبا','اهلا','أهلا','السلام','hello','hi','هاي'],reply:'أهلاً بك في دعم «توصيل العاشر» 👋\nأنا المساعد الذكي. اكتب سؤالك وأجاوبك فوراً، ولو احتجت مندوب بشري الإدارة هترد عليك.'},
+  {keys:['سعر','تكلفة','كام','فلوس','رسوم','اسعار','أسعار','cost','price'],reply:'التكلفة بتتحسب حسب المسافة والمنطقة داخل مدينة العاشر من رمضان.\nمن صفحة «طلب جديد» اضغط «احسب التكلفة» بعد ما تحدد مكان الاستلام والتسليم، وهتشوف السعر قبل التأكيد.'},
+  {keys:['طلب','اوردر','order','عايز اطلب','اعمل طلب'],reply:'لعمل طلب جديد:\n1) من الرئيسية اختار «طلب جديد»\n2) حدّد مكان الاستلام والتسليم على الخريطة\n3) اكتب بيانات المستلم والطرود\n4) احسب التكلفة ثم أكّد الطلب ✅'},
+  {keys:['تتبع','فين الطلب','وين','track','تتبع طلب'],reply:'تقدر تتبع طلبك من «طلباتي» ثم افتح الطلب واضغط «تتبع». هتشوف حالة الطلب والمندوب على الخريطة لما يتم التعيين.'},
+  {keys:['مندوب','سائق','كوريير','courier','وقت الوصول','متى يوصل'],reply:'بعد موافقة الإدارة بنبدأ البحث عن أقرب مندوب متاح في منطقتك. عادة التعيين بيتم خلال دقايق في أوقات الذروة قد يزيد الانتظار قليلاً.'},
+  {keys:['منطقة','مناطق','العاشر','zone'],reply:'الخدمة متاحة داخل مدينة العاشر من رمضان حسب المناطق المعرفة في النظام. لو منطقتك مش ظاهرة، اكتبها هنا والإدارة هتساعدك.'},
+  {keys:['الغاء','إلغاء','الغي','cancel'],reply:'لو الطلب لسه «بانتظار الموافقة» أو «جاري البحث» تقدر تطلب الإلغاء من تفاصيل الطلب أو اكتب رقم الطلب هنا وهنساعدك.'},
+  {keys:['دفع','فلوس','كاش','محفظة','payment'],reply:'طرق الدفع المتاحة: نقداً عند الاستلام، أو المحفظة إن كانت مفعّلة لحسابك. تختار الطريقة أثناء إنشاء الطلب.'},
+  {keys:['شكرا','شكراً','تسلم','thx','thanks'],reply:'العفو 🌟 لو محتاج أي حاجة تانية أنا هنا. تقدر كمان تستنى رد الإدارة المباشرة.'},
+  {keys:['مشكلة','مش شغال','خطأ','error','عطل'],reply:'آسف على الإزعاج. وضّحلي المشكلة باختصار (مثلاً: مش بيفتح الطلب / مش لاقي مندوب / الدفع) ورقم الطلب إن وجد، والإدارة هتتابع معاك.'},
+];
+function botPickReply(text){
+  const t=String(text||'').toLowerCase();
+  for(const r of BOT_REPLIES){if(r.keys.some(k=>t.includes(String(k).toLowerCase())))return r.reply;}
+  return 'وصلت رسالتك ✅\nالمساعد الذكي معاك دلوقتي. اكتب عن: الأسعار، عمل طلب، التتبع، المندوب، أو الإلغاء.\nولو الإدارة متصلة هيردوا عليك في أقرب وقت.';
+}
+function supportBoxFor(userId){
+  if(currentUser?.role==='admin')return $('admin-chat-messages');
+  if(currentUser?.role==='courier')return $('courier-chat-messages');
+  return $('client-chat-messages');
+}
+function bubbleHtml(m){
+  const mine=m.senderId===currentUser?.id;
+  const isBot=m.senderId===BOT_ID||m.isBot;
+  const cls=mine?'mine':(isBot?'theirs bot':'theirs');
+  const badge=isBot?'<span class="bot-badge"><i class="fas fa-robot"></i> مساعد ذكي</span>':'';
+  return `<div class="chat-bubble ${cls}" data-id="${esc(m.id||'')}"><div class="chat-bubble-text">${esc(m.text).replace(/\n/g,'<br>')}</div>${badge}<small>${fmtDate(m.createdAt)}</small></div>`;
+}
+function showTyping(box,show){
+  if(!box)return;
+  let el=box.querySelector('.typing-indicator');
+  if(show){
+    if(!el){el=document.createElement('div');el.className='typing-indicator chat-bubble theirs bot';el.innerHTML='<span></span><span></span><span></span>';box.appendChild(el);}
+    box.scrollTop=box.scrollHeight;
+  }else if(el)el.remove();
+}
+async function openSupport(role){go(role+'-chat');await ensureWelcomeBot(currentUser.id);await renderSupportChat(currentUser.id);}
+async function ensureWelcomeBot(userId){
+  try{
+    const tid=threadIdFor(userId);
+    const msgs=(await DB.all('messages')).filter(m=>m.threadId===tid);
+    if(msgs.length)return;
+    await DB.put('messages',{id:DB.uid('msg'),threadId:tid,senderId:BOT_ID,recipientId:userId,text:'أهلاً بك في دعم توصيل العاشر 🚚\nأنا المساعد الذكي. اسأل عن الأسعار، الطلبات، التتبع، أو أي استفسار — وهرد فوراً لحد ما الإدارة تتواصل معاك.',createdAt:DB.now(),read:false,isBot:true});
+  }catch(e){}
+}
 async function renderSupportChat(userId){
+  if(!userId||!currentUser)return;
   const msgs=(await DB.all('messages')).filter(m=>m.threadId===threadIdFor(userId)).sort((a,b)=>String(a.createdAt).localeCompare(String(b.createdAt)));
-  const box=$('client-chat-messages')||$('courier-chat-messages')||$('admin-chat-messages'); if(!box)return;
-  box.innerHTML=msgs.length?msgs.map(m=>`<div class="chat-bubble ${m.senderId===currentUser.id?'mine':'theirs'}"><div>${esc(m.text)}</div><small>${fmtDate(m.createdAt)}</small></div>`).join(''):empty('ابدأ المحادثة مع الإدارة');
+  const box=supportBoxFor(userId); if(!box)return;
+  box.innerHTML=msgs.length?msgs.map(bubbleHtml).join(''):`<div class="chat-empty"><i class="fas fa-comments"></i><p>ابدأ المحادثة مع الدعم</p><small>المساعد الذكي هيرد عليك فوراً</small></div>`;
   box.scrollTop=box.scrollHeight;
 }
-async function sendSupportMessage(userId,textMsg){const t=String(textMsg||'').trim();if(!t)return;const tid=threadIdFor(userId);await DB.put('messages',{id:DB.uid('msg'),threadId:tid,senderId:currentUser.role==='admin'?currentUser.id:userId,recipientId:currentUser.role==='admin'?userId:null,text:t,createdAt:DB.now(),read:false});}
+async function sendSupportMessage(userId,textMsg){
+  const t=String(textMsg||'').trim(); if(!t||!currentUser)return;
+  const tid=threadIdFor(userId);
+  const isAdmin=currentUser.role==='admin';
+  const msg={id:DB.uid('msg'),threadId:tid,senderId:isAdmin?currentUser.id:userId,recipientId:isAdmin?userId:null,text:t,createdAt:DB.now(),read:false};
+  // تحديث فوري للواجهة قبل الحفظ
+  const box=supportBoxFor(userId);
+  if(box){
+    const emptyEl=box.querySelector('.chat-empty,.empty-state'); if(emptyEl)emptyEl.remove();
+    box.insertAdjacentHTML('beforeend',bubbleHtml(msg));
+    box.scrollTop=box.scrollHeight;
+  }
+  try{
+    await DB.put('messages',msg);
+    // إشعار الإدارة عند رسالة من عميل/مندوب
+    if(!isAdmin){
+      const admins=(await DB.all('users')).filter(x=>x.role==='admin'&&x.status==='active');
+      for(const a of admins){
+        try{await DB.notify(a.id,'رسالة دعم جديدة',(currentUser.name||'مستخدم')+': '+t.slice(0,80),'info',{threadUserId:userId});}catch(e){}
+      }
+      // رد البوت التلقائي
+      scheduleBotReply(userId,t);
+    }else{
+      // تعليم رسائل المستخدم كمقروءة اختيارياً لاحقاً
+    }
+  }catch(e){toast(e.message||'تعذر إرسال الرسالة','error');}
+}
+function scheduleBotReply(userId,userText){
+  // لا نرد لو الإدارة ردت خلال آخر دقيقتين (محادثة بشرية نشطة)
+  const delay=900+Math.random()*700;
+  const box=supportBoxFor(userId);
+  showTyping(box,true);
+  setTimeout(async()=>{
+    try{
+      const tid=threadIdFor(userId);
+      const msgs=(await DB.all('messages')).filter(m=>m.threadId===tid).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+      const recentAdmin=msgs.find(m=>m.senderId!==userId&&m.senderId!==BOT_ID&&!m.isBot);
+      if(recentAdmin){
+        const age=Date.now()-new Date(recentAdmin.createdAt).getTime();
+        if(age<120000){showTyping(box,false);return;} // إدارة نشطة
+      }
+      // لو آخر رسالة بوت خلال 4 ثواني لا تكرر
+      const lastBot=msgs.find(m=>m.senderId===BOT_ID||m.isBot);
+      if(lastBot&&Date.now()-new Date(lastBot.createdAt).getTime()<4000){showTyping(box,false);return;}
+      const reply=botPickReply(userText);
+      const botMsg={id:DB.uid('msg'),threadId:tid,senderId:BOT_ID,recipientId:userId,text:reply,createdAt:DB.now(),read:false,isBot:true};
+      await DB.put('messages',botMsg);
+      showTyping(box,false);
+      if(box&&currentUser&&(currentUser.id===userId||currentUser.role==='admin')){
+        box.insertAdjacentHTML('beforeend',bubbleHtml(botMsg));
+        box.scrollTop=box.scrollHeight;
+      }
+    }catch(e){showTyping(box,false);}
+  },delay);
+}
 async function renderSupportIfOpen(){
  if(!currentUser)return;
  if(currentUser.role==='client'&&$('client-chat')?.classList.contains('active')) return renderSupportChat(currentUser.id);
@@ -235,9 +354,18 @@ async function renderSupportIfOpen(){
 }
 async function renderAdminSupport(){
  const users=(await DB.all('users')).filter(u=>u.role!=='admin'); const msgs=await DB.all('messages');
- const threads=users.map(u=>{const ms=msgs.filter(m=>m.threadId===threadIdFor(u.id));const last=ms.sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))[0];return {u,last}}).sort((a,b)=>String(b.last?.createdAt||'').localeCompare(String(a.last?.createdAt||'')));
- const list=$('support-threads'); if(!list)return; list.innerHTML=threads.map(({u,last})=>`<button class="support-thread ${activeSupportThread===u.id?'active':''}" onclick="window.openAdminThread('${u.id}')"><i class="fas fa-user-circle"></i><span><b>${esc(u.name)}</b><small>${esc(last?.text||'لا توجد رسائل')}</small></span></button>`).join('')||empty('لا توجد محادثات');
- if(activeSupportThread){const u=await DB.get('users',activeSupportThread);if(u){$('admin-chat-header').innerHTML=`<i class="fas fa-user-circle"></i> ${esc(u.name)} <small>${u.phone||''}</small>`;const ms=msgs.filter(m=>m.threadId===threadIdFor(u.id)).sort((a,b)=>String(a.createdAt).localeCompare(String(b.createdAt)));$('admin-chat-messages').innerHTML=ms.length?ms.map(m=>`<div class="chat-bubble ${m.senderId===currentUser.id?'mine':'theirs'}"><div>${esc(m.text)}</div><small>${fmtDate(m.createdAt)}</small></div>`).join(''):empty('ابدأ المحادثة');const b=$('admin-chat-messages');b.scrollTop=b.scrollHeight;}}
+ const threads=users.map(u=>{const ms=msgs.filter(m=>m.threadId===threadIdFor(u.id));const last=ms.sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))[0];const unread=ms.filter(m=>!m.read&&m.senderId!==currentUser.id&&m.senderId!==BOT_ID).length;return {u,last,unread}}).filter(x=>x.last).sort((a,b)=>String(b.last?.createdAt||'').localeCompare(String(a.last?.createdAt||'')));
+ const list=$('support-threads'); if(!list)return;
+ list.innerHTML=threads.length?threads.map(({u,last,unread})=>`<button class="support-thread ${activeSupportThread===u.id?'active':''}" onclick="window.openAdminThread('${u.id}')"><i class="fas fa-user-circle"></i><span><b>${esc(u.name)}${unread?`<em class="unread-dot">${unread}</em>`:''}</b><small>${esc(last?.text||'لا توجد رسائل')}</small></span></button>`).join(''):`<div class="chat-empty"><i class="fas fa-inbox"></i><p>لا توجد محادثات بعد</p><small>لما عميل أو مندوب يبعت رسالة هتظهر هنا</small></div>`;
+ if(activeSupportThread){
+  const u=await DB.get('users',activeSupportThread);
+  if(u){
+   $('admin-chat-header').innerHTML=`<div class="chat-header-info"><i class="fas fa-user-circle"></i><div><b>${esc(u.name)}</b><small>${esc(u.phone||'')} · ${u.role==='courier'?'مندوب':'عميل'}</small></div></div>`;
+   const ms=msgs.filter(m=>m.threadId===threadIdFor(u.id)).sort((a,b)=>String(a.createdAt).localeCompare(String(b.createdAt)));
+   const box=$('admin-chat-messages');
+   if(box){box.innerHTML=ms.length?ms.map(m=>bubbleHtml({...m,senderId:m.senderId})).join(''):`<div class="chat-empty"><i class="fas fa-comments"></i><p>ابدأ المحادثة</p></div>`;box.scrollTop=box.scrollHeight;}
+  }
+ }
 }
 window.openAdminThread=async id=>{activeSupportThread=id;go('admin-support');await renderAdminSupport()};
 async function startCall(userId){
@@ -271,8 +399,15 @@ function showCallOverlay(peerId){if($('call-overlay'))return;const d=document.cr
 window.endWebCall=async()=>{try{callState.local?.getTracks().forEach(t=>t.stop());callState.pc?.close()}catch(e){}callState={pc:null,local:null,remote:null,thread:null};$('active-call-audio')?.remove();$('call-overlay')?.remove()};
 function wireSupportUI(){
  $('client-chat-btn')?.addEventListener('click',()=>openSupport('client'));$('courier-chat-btn')?.addEventListener('click',()=>openSupport('courier'));
- [['client','client'],['courier','courier']].forEach(([r])=>{const inp=$(r+'-chat-input'),send=$(r+'-chat-send'),call=$(r+'-call-btn');send?.addEventListener('click',async()=>{await sendSupportMessage(currentUser.id,inp.value);inp.value='';renderSupportChat(currentUser.id)});inp?.addEventListener('keydown',e=>{if(e.key==='Enter')send.click()});call?.addEventListener('click',()=>startCall(currentUser.id));});
- $('admin-chat-send')?.addEventListener('click',async()=>{if(!activeSupportThread)return;const inp=$('admin-chat-input');await sendSupportMessage(activeSupportThread,inp.value);inp.value='';renderAdminSupport()});$('admin-chat-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')$('admin-chat-send').click()});
+ [['client','client'],['courier','courier']].forEach(([r])=>{
+  const inp=$(r+'-chat-input'),send=$(r+'-chat-send'),call=$(r+'-call-btn');
+  const doSend=async()=>{if(!inp||!currentUser)return;const v=inp.value;if(!String(v).trim())return;inp.value='';inp.focus();await sendSupportMessage(currentUser.id,v);};
+  send?.addEventListener('click',doSend);
+  inp?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSend();}});
+  call?.addEventListener('click',()=>startCall(currentUser.id));
+ });
+ $('admin-chat-send')?.addEventListener('click',async()=>{if(!activeSupportThread)return;const inp=$('admin-chat-input');const v=inp.value;if(!String(v).trim())return;inp.value='';inp.focus();await sendSupportMessage(activeSupportThread,v);});
+ $('admin-chat-input')?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('admin-chat-send')?.click();}});
  $('admin-call-open')?.addEventListener('change',async e=>{await DB.put('support_presence',{id:currentUser.id,role:'admin',online:true,callOpen:e.target.checked,updatedAt:DB.now()});toast(e.target.checked?'تم فتح استقبال المكالمات':'تم إغلاق استقبال المكالمات')});
 }
 

@@ -507,7 +507,6 @@
           <button class="side-item" data-page="admin-zones"><i class="fas fa-map-marked-alt"></i> المناطق</button>
           <button class="side-item" data-page="admin-database"><i class="fas fa-database"></i> قاعدة البيانات</button>
           <button class="side-item" data-page="admin-map"><i class="fas fa-map"></i> الخريطة</button><button class="side-item" data-page="admin-support"><i class="fas fa-headset"></i> الدعم والمحادثات</button><button class="side-item" data-page="admin-ranking"><i class="fas fa-trophy"></i> ترتيب العملاء والهدايا</button>
-          <button class="side-item" id="admin-logout"><i class="fas fa-sign-out-alt"></i> خروج</button>
         </nav>
       </aside>
 
@@ -515,9 +514,20 @@
         <header class="admin-header">
           <button class="icon-btn mobile-only" id="sidebar-toggle"><i class="fas fa-bars"></i></button>
           <h2 id="admin-page-title">الإحصائيات</h2>
-          <div class="admin-user">
-            <span>مدير النظام</span>
-            <img src="https://ui-avatars.com/api/?name=Admin&background=7c3aed&color=fff" class="avatar-sm">
+          <div class="admin-user" id="admin-user-menu">
+            <button type="button" class="admin-user-btn" id="admin-user-btn" aria-haspopup="true" aria-expanded="false">
+              <span id="admin-user-name">مدير النظام</span>
+              <img id="admin-user-avatar" src="https://ui-avatars.com/api/?name=Admin&background=7c3aed&color=fff" class="avatar-sm" alt="صورة الأدمن">
+              <i class="fas fa-chevron-down admin-user-chevron"></i>
+            </button>
+            <div class="admin-user-dropdown" id="admin-user-dropdown" hidden>
+              <button type="button" class="admin-dropdown-item" id="admin-profile-btn">
+                <i class="fas fa-user-cog"></i> إعدادات الحساب
+              </button>
+              <button type="button" class="admin-dropdown-item admin-dropdown-logout" id="admin-logout">
+                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+              </button>
+            </div>
           </div>
         </header>
 
