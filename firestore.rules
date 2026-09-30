@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return true; }
+    // NOTE: the current legacy web app uses its own session collection.
+    // Before production launch, migrate authorization to Firebase Auth custom claims.
+    match /{document=**} { allow read, write: if signedIn(); }
+  }
+}

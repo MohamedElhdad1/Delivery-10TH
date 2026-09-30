@@ -8,9 +8,9 @@ function toast(msg,type='success'){const e=$('toast');e.textContent=msg;e.classN
 function modal(title,body,footer=''){ $('modal-title').textContent=title;$('modal-body').innerHTML=body;$('modal-footer').innerHTML=footer;$('modal').classList.remove('hidden'); }
 function closeModal(){$('modal').classList.add('hidden')}
 function showScreen(role){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));$(role+'-screen')?.classList.add('active');}
-function go(page){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$(page)?.classList.add('active');document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===page));const t=$(page+'-title');if(t)$('admin-page-title').textContent=t.textContent||''; if(page==='admin-map')setTimeout(initAdminMap,100); if(page==='admin-database')setTimeout(renderAdminDatabase,50); if(page==='client-create'){setTimeout(initOrderMaps,100);populateZoneSelect();} if(page==='client-track')setTimeout(renderTrack,100); if(page==='client-profile')renderClientProfile(); if(page==='client-notifications')renderNotifications(); if(page==='courier-profile')renderCourierProfile(); if(page==='admin-zones')renderAdminZones(); if(page==='client-ranking')renderRanking(); if(page==='admin-ranking')renderAdminRanking(); if(page==='client-chat'||page==='courier-chat')setTimeout(async()=>{if(currentUser){await ensureWelcomeBot(currentUser.id);await renderSupportChat(currentUser.id);}},30); if(page==='admin-support')setTimeout(renderAdminSupport,30);}
+function go(page){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$(page)?.classList.add('active');document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===page));const t=$(page+'-title');if(t)$('admin-page-title').textContent=t.textContent||''; if(page==='admin-map')setTimeout(initAdminMap,100); if(page==='admin-database')setTimeout(renderAdminDatabase,50); if(page==='client-create'){setTimeout(initOrderMaps,100);populateZoneSelect();} if(page==='client-track')setTimeout(renderTrack,100); if(page==='client-profile')renderClientProfile(); if(page==='client-notifications')renderNotifications(); if(page==='courier-profile')renderCourierProfile(); if(page==='admin-zones')renderAdminZones(); if(page==='admin-courier-applications')renderCourierApplications(); if(page==='client-ranking')renderRanking(); if(page==='admin-ranking')renderAdminRanking(); if(page==='client-chat'||page==='courier-chat')setTimeout(async()=>{if(currentUser){await ensureWelcomeBot(currentUser.id);await renderSupportChat(currentUser.id);}},30); if(page==='admin-support')setTimeout(renderAdminSupport,30);}
 async function populateZoneSelect(){const zones=await DB.all('zones');const sel=$('order-zone');if(sel&&!sel.dataset.filled){sel.innerHTML=zones.map(z=>`<option value="${z.id}">${esc(z.name)}</option>`).join('');sel.dataset.filled='1'}}
-async function refresh(){if(!currentUser)return; if(currentUser.role==='admin')await renderAdmin(); if(currentUser.role==='client')await renderClient(); if(currentUser.role==='courier')await renderCourier();}
+async function refresh(){if(!currentUser)return; if(currentUser.role==='admin'){await renderAdmin(); await renderCourierApplications();} if(currentUser.role==='client')await renderClient(); if(currentUser.role==='courier')await renderCourier();}
 async function restoreSession(){
  const sid=localStorage.getItem('delivery_session'); if(!sid) return false;
  try{
@@ -43,6 +43,7 @@ async function init(){
  document.addEventListener('click',ev=>{const sb=document.querySelector('.sidebar');if(sb&&sb.classList.contains('open')&&!sb.contains(ev.target)&&ev.target.id!=='sidebar-toggle'&&!ev.target.closest('#sidebar-toggle'))sb.classList.remove('open')});
  document.querySelectorAll('.auth-tab').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.auth-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.auth-form').forEach(x=>x.classList.remove('active'));$('login-form').classList.toggle('active',b.dataset.tab==='login');$('register-form').classList.toggle('active',b.dataset.tab==='register')}));
  $('login-form').addEventListener('submit',doLogin);$('register-form').addEventListener('submit',doRegister);
+ $('reg-role')?.addEventListener('change',e=>toggleCourierRegister(e.target.value==='courier')); toggleCourierRegister($('reg-role')?.value==='courier');
  // قائمة حساب الأدمن (صورة + إعدادات + خروج)
  (function setupAdminUserMenu(){
   const btn=$('admin-user-btn'),dd=$('admin-user-dropdown'),menu=$('admin-user-menu');
@@ -61,8 +62,47 @@ async function init(){
  await restoreSession();
  setTimeout(()=>{const s=$('splash');if(s)s.style.display='none';$('app')?.classList.remove('hidden')},400);
 }
+function toggleCourierRegister(show){
+ const box=$('courier-register-fields'),note=$('courier-register-note'); if(!box)return; box.classList.toggle('hidden',!show); note?.classList.toggle('hidden',!show);
+ $('reg-id-front')?.toggleAttribute('required',show);$('reg-id-back')?.toggleAttribute('required',show);$('reg-selfie')?.toggleAttribute('required',show);$('reg-vehicle-photo')?.toggleAttribute('required',show);
+}
+async function renderCourierApplications(){
+ if(!currentUser||currentUser.role!=='admin')return;
+ const apps=await DB.all('courierApplications'),users=await DB.all('users');
+ const counts={pending:0,approved:0,rejected:0}; apps.forEach(a=>counts[a.status]=(counts[a.status]||0)+1);
+ ['pending','approved','rejected'].forEach(k=>{const el=$(k+'-courier-count');if(el)el.textContent=counts[k]||0});
+ const badge=$('admin-courier-pending-badge');if(badge)badge.textContent=counts.pending||0;
+ const list=$('admin-courier-applications-list');if(!list)return;
+ const ordered=apps.sort((a,b)=>String(b.submittedAt||'').localeCompare(String(a.submittedAt||'')));
+ list.innerHTML=ordered.length?ordered.map(a=>{const u=users.find(x=>x.id===a.userId)||{};const st=a.status==='pending'?'قيد المراجعة':a.status==='approved'?'معتمد':'مرفوض';return `<article class="application-card"><div class="application-head"><div class="application-avatar"><img src="${a.selfieUrl||u.avatar||'https://ui-avatars.com/api/?name='+encodeURIComponent(u.name||'Courier')}" alt=""></div><div><h3>${esc(u.name||'مندوب')}</h3><p>${esc(u.phone||'')} · ${esc(u.email||a.email||'')}</p><span class="approval-badge ${a.status}">${st}</span></div></div><div class="application-meta"><span><i class="fas fa-motorcycle"></i>${esc(a.vehicleType||'غير محدد')}</span><span><i class="fas fa-id-card"></i> مستندات مرفوعة</span><span><i class="fas fa-calendar"></i>${fmtDate(a.submittedAt)}</span></div><div class="application-actions"><button class="btn btn-outline" onclick="window.reviewCourierApplication('${a.id}')"><i class="fas fa-eye"></i> مراجعة التفاصيل</button>${a.status==='pending'?`<button class="btn btn-success" onclick="window.approveCourierApplication('${a.id}')"><i class="fas fa-check"></i> اعتماد</button><button class="btn btn-danger" onclick="window.rejectCourierApplication('${a.id}')"><i class="fas fa-xmark"></i> رفض</button>`:''}</div></article>`}).join(''):empty('لا توجد طلبات اعتماد حالياً');
+}
+window.reviewCourierApplication=async id=>{const a=await DB.get('courierApplications',id);if(!a)return;const u=await DB.get('users',a.userId)||{};modal('مراجعة طلب المندوب',`<div class="application-review"><div class="review-profile"><img src="${a.selfieUrl||u.avatar||''}" class="review-avatar"><div><h3>${esc(u.name||'')}</h3><p>${esc(u.phone||'')} · ${esc(u.email||a.email||'')}</p></div></div><div class="review-grid"><div><b>العنوان</b><span>${esc(a.address||u.address||'')}</span></div><div><b>المركبة</b><span>${esc(a.vehicleType||'')} — ${esc(a.vehicleNumber||u.vehicleNumber||'')}</span></div></div><h4>المستندات</h4><div class="document-preview-grid">${[['البطاقة الأمامية',a.idFrontUrl],['البطاقة الخلفية',a.idBackUrl],['الصورة الشخصية',a.selfieUrl],['صورة المركبة',a.vehiclePhotoUrl]].map(([n,url])=>`<a href="${url||'#'}" target="_blank" rel="noopener"><img src="${url||''}"><span>${n}</span></a>`).join('')}</div>${a.rejectionReason?`<div class="rejection-note"><b>سبب الرفض:</b> ${esc(a.rejectionReason)}</div>`:''}</div>`,`<button class="btn btn-outline" onclick="closeModal()">إغلاق</button>${a.status==='pending'?`<button class="btn btn-danger" onclick="closeModal();window.rejectCourierApplication('${a.id}')">رفض</button><button class="btn btn-success" onclick="closeModal();window.approveCourierApplication('${a.id}')">اعتماد</button>`:''}`)};
+window.approveCourierApplication=async id=>{try{const a=await DB.get('courierApplications',id);if(!a||a.status!=='pending')return;const u=await DB.get('users',a.userId);await DB.put('courierApplications',{...a,status:'approved',approvedAt:DB.now(),approvedBy:currentUser.id,updatedAt:DB.now(),rejectionReason:''});await DB.updateUser(u.id,{status:'active',approvalStatus:'approved',online:false},currentUser.id);await DB.notify(u.id,'تم اعتماد حساب المندوب 🎉','تمت الموافقة على طلبك. يمكنك الآن تسجيل الدخول واستخدام لوحة المندوب.','success');await DB.log(currentUser.id,'approve_courier','اعتماد مندوب',{userId:u.id,applicationId:id});toast('تم اعتماد المندوب بنجاح');await renderCourierApplications();await renderAdminCouriers()}catch(e){toast(e.message||'تعذر الاعتماد','error')}};
+window.rejectCourierApplication=async id=>{const reason=prompt('اكتب سبب رفض الطلب ليظهر للمندوب:');if(!reason?.trim())return;try{const a=await DB.get('courierApplications',id);if(!a)return;const u=await DB.get('users',a.userId);await DB.put('courierApplications',{...a,status:'rejected',rejectedAt:DB.now(),rejectedBy:currentUser.id,updatedAt:DB.now(),rejectionReason:reason.trim()});await DB.updateUser(u.id,{status:'rejected',approvalStatus:'rejected'},currentUser.id);await DB.notify(u.id,'تم رفض طلب المندوب','سبب الرفض: '+reason.trim(),'warning');await DB.log(currentUser.id,'reject_courier','رفض طلب مندوب',{userId:u.id,applicationId:id,reason:reason.trim()});toast('تم رفض الطلب');await renderCourierApplications();await renderAdminCouriers()}catch(e){toast(e.message||'تعذر رفض الطلب','error')}};
+
 async function doLogin(e){e.preventDefault();try{currentUser=await DB.login($('login-phone').value,$('login-password').value,$('login-role').value);localStorage.setItem('delivery_session',currentUser.sessionId);showScreen(currentUser.role);await refresh();await setupRealtime();toast('تم تسجيل الدخول');}catch(err){toast(err.message,'error')}}
-async function doRegister(e){e.preventDefault();try{const role=$('reg-role').value;await DB.createUser({name:$('reg-name').value,phone:$('reg-phone').value,password:$('reg-password').value,role});toast('تم إنشاء الحساب ويمكنك تسجيل الدخول');e.target.reset();document.querySelector('[data-tab="login"]').click()}catch(err){toast(err.message,'error')}}
+async function doRegister(e){
+ e.preventDefault();
+ const submit=$('register-submit'); if(submit){submit.disabled=true;submit.innerHTML='<i class="fas fa-spinner fa-spin"></i> جاري إنشاء الحساب...';}
+ try{
+  const role=$('reg-role').value;
+  const payload={name:$('reg-name').value,phone:$('reg-phone').value,email:$('reg-email').value,password:$('reg-password').value,role};
+  if(role==='courier'){
+   if(!$('reg-terms').checked)throw new Error('يجب الموافقة على الشروط قبل إرسال طلب المندوب');
+   payload.address=$('reg-address').value; payload.vehicleType=$('reg-vehicle-type').value; payload.vehicleNumber=$('reg-vehicle-number').value;
+   const files=[['reg-id-front','id-front'],['reg-id-back','id-back'],['reg-selfie','selfie'],['reg-vehicle-photo','vehicle-photo']];
+   for(const [id,label] of files){const file=$(id)?.files?.[0];if(!file)throw new Error('يرجى رفع '+label+' للمندوب');}
+   const tempId=DB.uid('app');
+   for(const [id,label] of files){const file=$(id).files[0];payload[label.replaceAll('-','')+'Url']=await DB.uploadFile(file,`courier-documents/${tempId}/${label}`);}
+   payload.idFrontUrl=payload.idfrontUrl;payload.idBackUrl=payload.idbackUrl;payload.selfieUrl=payload.selfieUrl;payload.vehiclePhotoUrl=payload.vehiclephotoUrl;
+   const u=await DB.createUser(payload);
+   await DB.notify(u.id,'تم استلام طلب المندوب','تم استلام بياناتك ومستنداتك بنجاح. حسابك الآن قيد مراجعة الإدارة.','info');
+   toast('تم إرسال طلب المندوب للمراجعة'); e.target.reset(); toggleCourierRegister(false); document.querySelector('[data-tab="login"]').click();
+  }else{
+   await DB.createUser(payload); toast('تم إنشاء الحساب ويمكنك تسجيل الدخول'); e.target.reset(); toggleCourierRegister(false); document.querySelector('[data-tab="login"]').click();
+  }
+ }catch(err){toast(err.message||'تعذر إنشاء الحساب','error')}finally{if(submit){submit.disabled=false;submit.innerHTML='<i class="fas fa-user-plus"></i> إنشاء الحساب';}}
+}
 function logout(){try{DB.touchPresence(currentUser.id,false);if(currentUser?.role==='admin')DB.put('support_presence',{id:currentUser.id,role:'admin',online:false,callOpen:false,updatedAt:DB.now()});DB.stopAllListeners()}catch(e){}stopRealtime();currentUser=null;localStorage.removeItem('delivery_session');showScreen('auth');toast('تم تسجيل الخروج')}
 async function renderAdmin(){
  const users=await DB.all('users'),orders=await DB.all('orders');

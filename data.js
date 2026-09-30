@@ -17,7 +17,7 @@
     measurementId: "G-ZCVSCHFP6J"
   };
 
-  let db = null, fbReadyPromise = null;
+  let db = null, storage = null, fbReadyPromise = null;
 
   function ensureFirebase() {
     if (fbReadyPromise) return fbReadyPromise;
@@ -33,6 +33,7 @@
       try {
         if (!firebase.apps.length) firebase.initializeApp(window.FIREBASE_CONFIG);
         db = firebase.firestore();
+        storage = firebase.storage();
         resolve(db);
       } catch (e) { reject(e); }
     });
@@ -137,8 +138,12 @@
   async function notify(userId, title, message, type = 'info', meta) { await put('notifications', { id: uid('not'), userId, title, message, type, meta: meta || null, read: false, createdAt: now() }); }
   async function login(phone, password, role) {
     const p = normalizePhone(phone), h = await hash(password), users = await all('users');
-    const u = users.find(x => x.phone === p && x.role === role && x.status === 'active');
-    if (!u || u.passwordHash !== h) throw new Error('بيانات الدخول غير صحيحة أو الحساب موقوف');
+    const u = users.find(x => x.phone === p && x.role === role);
+    if (!u) throw new Error('بيانات الدخول غير صحيحة');
+    if (u.role === 'courier' && u.status === 'pending') throw new Error('حساب المندوب قيد مراجعة الإدارة. ستصلك إشعاراً بعد الاعتماد.');
+    if (u.role === 'courier' && u.status === 'rejected') throw new Error('تم رفض طلب المندوب. افتح طلب التسجيل لمعرفة سبب الرفض وإعادة التقديم.');
+    if (u.status !== 'active') throw new Error('الحساب موقوف أو غير مفعل');
+    if (u.passwordHash !== h) throw new Error('بيانات الدخول غير صحيحة');
     const sid = uid('ses'); await put('sessions', { id: sid, userId: u.id, createdAt: now(), expiresAt: new Date(Date.now() + 86400000).toISOString() });
     await log(u.id, 'login', 'تسجيل دخول');
     const { passwordHash, ...rest } = u;
@@ -147,8 +152,27 @@
   async function createUser(data, actor) {
     const phone = normalizePhone(data.phone); if (!/^01\d{9}$/.test(phone)) throw new Error('رقم الهاتف غير صحيح');
     if ((await all('users')).some(x => x.phone === phone)) throw new Error('رقم الهاتف مستخدم بالفعل');
-    const u = { id: uid('usr'), name: String(data.name).trim(), phone, passwordHash: await hash(data.password), role: data.role || 'client', status: data.status || 'active', createdAt: now(), updatedAt: now(), online: false, rating: data.role === 'courier' ? 5 : null, earnings: 0, completedOrders: 0 };
-    await put('users', u); await log(actor, 'create_user', 'إنشاء حساب ' + u.role, { userId: u.id }); return u;
+    if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) throw new Error('البريد الإلكتروني غير صحيح');
+    if (String(data.password || '').length < 8) throw new Error('كلمة المرور يجب ألا تقل عن 8 أحرف');
+    const isCourier=data.role==='courier';
+    const u = { id: uid('usr'), name: String(data.name).trim(), phone, email:String(data.email||'').trim().toLowerCase(), passwordHash: await hash(data.password), role: data.role || 'client', status: isCourier ? 'pending' : (data.status || 'active'), approvalStatus:isCourier?'pending':'not_required', createdAt: now(), updatedAt: now(), online: false, rating: isCourier ? 5 : null, earnings: 0, completedOrders: 0, address:data.address||'', vehicleType:data.vehicleType||'', vehicleNumber:data.vehicleNumber||'', avatar:data.avatar||'' };
+    await put('users', u);
+    if(isCourier){
+      const application={id:uid('capp'),userId:u.id,status:'pending',submittedAt:now(),updatedAt:now(),email:u.email,address:u.address,vehicleType:u.vehicleType,vehicleNumber:u.vehicleNumber,idFrontUrl:data.idFrontUrl||'',idBackUrl:data.idBackUrl||'',selfieUrl:data.selfieUrl||'',vehiclePhotoUrl:data.vehiclePhotoUrl||'',rejectionReason:''};
+      await put('courierApplications',application);
+      await log(actor||u.id,'courier_application','تقديم طلب اعتماد مندوب',{userId:u.id,applicationId:application.id});
+    } else await log(actor, 'create_user', 'إنشاء حساب ' + u.role, { userId: u.id });
+    return u;
+  }
+  async function uploadFile(file,path){
+    await ensureFirebase();
+    if(!storage) throw new Error('Firebase Storage غير متاح');
+    if(!file) throw new Error('لم يتم اختيار ملف');
+    if(file.size>5*1024*1024) throw new Error('حجم الصورة يجب ألا يتجاوز 5MB');
+    if(!String(file.type||'').startsWith('image/')) throw new Error('يسمح برفع الصور فقط');
+    const ref=storage.ref().child(path);
+    const snap=await ref.put(file,{contentType:file.type});
+    return snap.ref.getDownloadURL();
   }
   async function updateUser(id, patch, actor) {
     const u = await get('users', id); if (!u) throw new Error('الحساب غير موجود');
@@ -163,5 +187,5 @@
     await del('users', id); await log(actor, 'delete_user', 'حذف حساب', { userId: id });
   }
 
-  window.DB = { open, seed, all, get, put, add, del, clear, count, listen, stopAllListeners, touchPresence, login, createUser, updateUser, deleteUser, notify, log, hash, normalizePhone, now, uid };
+  window.DB = { open, seed, all, get, put, add, del, clear, count, listen, stopAllListeners, touchPresence, login, createUser, updateUser, deleteUser, notify, log, hash, normalizePhone, now, uid, uploadFile };
 })();

@@ -1,0 +1,7 @@
+{
+  "appId":"com.waselni10th.delivery",
+  "appName":"Waselni 10th",
+  "webDir":".",
+  "bundledWebRuntime":false,
+  "server":{"androidScheme":"https"}
+}

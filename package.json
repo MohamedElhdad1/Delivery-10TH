@@ -1,9 +1,20 @@
 {
-  "name": "waselni-delivery",
-  "version": "1.0.0",
-  "description": "Arabic delivery management platform prototype",
-  "private": true,
-  "scripts": {
-    "serve": "python -m http.server 8080"
+  "name":"waselni-10th",
+  "version":"2.0.0",
+  "description":"Waselni 10th delivery platform - Web, PWA and Android",
+  "private":true,
+  "scripts":{
+    "serve":"python -m http.server 8080",
+    "build:web":"echo Web app is static and ready",
+    "cap:sync":"npx cap sync",
+    "android:open":"npx cap open android",
+    "android:build:debug":"cd android && gradlew.bat assembleDebug",
+    "android:build:release":"cd android && gradlew.bat assembleRelease",
+    "android:add":"npx cap add android"
+  },
+  "dependencies":{
+    "@capacitor/core":"^7.4.0",
+    "@capacitor/android":"^7.4.0",
+    "@capacitor/cli":"^7.4.0"
   }
 }

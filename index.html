@@ -17,7 +17,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="style.css?v=8">
+  <link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
   <!-- شاشة التحميل -->
@@ -119,17 +119,22 @@
 
         <!-- نموذج التسجيل -->
         <form id="register-form" class="auth-form">
+          <div class="register-progress" aria-hidden="true"><span class="active"></span><span></span><span></span></div>
           <div class="form-group">
             <label><i class="fas fa-user"></i> الاسم الكامل</label>
-            <input type="text" id="reg-name" placeholder="الاسم الثلاثي" required>
+            <input type="text" id="reg-name" placeholder="الاسم الثلاثي" minlength="3" required>
           </div>
           <div class="form-group">
             <label><i class="fas fa-phone"></i> رقم الهاتف</label>
-            <input type="tel" id="reg-phone" placeholder="01xxxxxxxxx" required>
+            <input type="tel" id="reg-phone" placeholder="01xxxxxxxxx" inputmode="tel" required>
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
+            <input type="email" id="reg-email" placeholder="name@example.com" required>
           </div>
           <div class="form-group">
             <label><i class="fas fa-lock"></i> كلمة المرور</label>
-            <input type="password" id="reg-password" placeholder="••••••••" required>
+            <input type="password" id="reg-password" placeholder="8 أحرف على الأقل" minlength="8" required>
           </div>
           <div class="form-group">
             <label><i class="fas fa-user-tag"></i> نوع الحساب</label>
@@ -138,9 +143,25 @@
               <option value="courier">مندوب توصيل</option>
             </select>
           </div>
-          <button type="submit" class="btn btn-primary btn-block">
+          <div id="courier-register-fields" class="courier-register-fields hidden">
+            <div class="verification-banner"><i class="fas fa-shield-halved"></i><div><b>تسجيل مندوب موثّق</b><small>لن يتم تفعيل حساب المندوب إلا بعد مراجعة وموافقة الإدارة.</small></div></div>
+            <div class="form-row">
+              <div class="form-group"><label>نوع المركبة</label><select id="reg-vehicle-type"><option value="motorcycle">موتوسيكل</option><option value="scooter">سكوتر</option><option value="car">سيارة</option><option value="other">أخرى</option></select></div>
+              <div class="form-group"><label>رقم المركبة</label><input id="reg-vehicle-number" placeholder="رقم المركبة"></div>
+            </div>
+            <div class="form-group"><label>العنوان / منطقة العمل</label><input id="reg-address" placeholder="الحي أو المنطقة داخل العاشر"></div>
+            <div class="document-upload-grid">
+              <label class="upload-card"><i class="fas fa-id-card"></i><b>صورة البطاقة</b><small>أمام البطاقة</small><input type="file" id="reg-id-front" accept="image/*" required></label>
+              <label class="upload-card"><i class="fas fa-id-card"></i><b>ظهر البطاقة</b><small>خلف البطاقة</small><input type="file" id="reg-id-back" accept="image/*" required></label>
+              <label class="upload-card"><i class="fas fa-camera"></i><b>صورة شخصية</b><small>صورة واضحة للوجه</small><input type="file" id="reg-selfie" accept="image/*" required></label>
+              <label class="upload-card"><i class="fas fa-motorcycle"></i><b>صورة المركبة</b><small>صورة واضحة</small><input type="file" id="reg-vehicle-photo" accept="image/*" required></label>
+            </div>
+            <label class="terms-check"><input type="checkbox" id="reg-terms"><span>أوافق على شروط استخدام المنصة وسياسة الخصوصية وأقر بصحة البيانات والمستندات المقدمة.</span></label>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" id="register-submit">
             <i class="fas fa-user-plus"></i> إنشاء الحساب
           </button>
+          <div id="courier-register-note" class="form-note hidden"><i class="fas fa-info-circle"></i> حساب المندوب سيظل قيد المراجعة حتى موافقة الإدارة.</div>
         </form>
       </div>
     </div>
@@ -507,6 +528,7 @@
           <button class="side-item" data-page="admin-orders"><i class="fas fa-box"></i> الطلبات</button>
           <button class="side-item" data-page="admin-clients"><i class="fas fa-users"></i> العملاء</button>
           <button class="side-item" data-page="admin-couriers"><i class="fas fa-motorcycle"></i> المندوبين</button>
+          <button class="side-item approval-nav" data-page="admin-courier-applications"><i class="fas fa-user-check"></i> طلبات اعتماد المندوبين <span id="admin-courier-pending-badge" class="nav-badge">0</span></button>
           <button class="side-item" data-page="admin-zones"><i class="fas fa-map-marked-alt"></i> المناطق</button>
           <button class="side-item" data-page="admin-database"><i class="fas fa-database"></i> قاعدة البيانات</button>
           <button class="side-item" data-page="admin-map"><i class="fas fa-map"></i> الخريطة</button><button class="side-item" data-page="admin-support"><i class="fas fa-headset"></i> الدعم والمحادثات</button><button class="side-item" data-page="admin-ranking"><i class="fas fa-trophy"></i> ترتيب العملاء والهدايا</button>
@@ -619,6 +641,12 @@
             <div id="admin-couriers-table" class="table-responsive"></div>
           </section>
 
+          <section id="admin-courier-applications" class="page">
+            <div class="page-header"><div><h2><i class="fas fa-user-check"></i> طلبات اعتماد المندوبين</h2><p class="muted">راجع بيانات ومستندات كل مندوب قبل تفعيل الحساب.</p></div></div>
+            <div class="approval-stats"><div class="approval-stat"><b id="pending-courier-count">0</b><span>قيد المراجعة</span></div><div class="approval-stat"><b id="approved-courier-count">0</b><span>معتمدون</span></div><div class="approval-stat"><b id="rejected-courier-count">0</b><span>مرفوضون</span></div></div>
+            <div id="admin-courier-applications-list" class="application-grid"></div>
+          </section>
+
           <section id="admin-zones" class="page">
             <div class="page-header">
               <h2>مناطق التغطية - مدينة العاشر من رمضان</h2>
@@ -707,9 +735,10 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
-    <script src="data.js?v=8"></script>
-  <script src="app.js?v=8"></script>
-  <script src="enhance.js?v=8"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js"></script>
+    <script src="data.js?v=9"></script>
+  <script src="app.js?v=9"></script>
+  <script src="enhance.js?v=9"></script>
   <script>
     // تحديث تلقائي: نفس مسار sw.js عشان يستبدل القديم، والـ SW بيعمل reload لوحده
     (function () {
